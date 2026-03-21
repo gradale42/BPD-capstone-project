@@ -1,0 +1,27 @@
+{
+  "draw": 1,
+  "recordsTotal": 1000,
+  "recordsFiltered": 1000,
+  "data": [
+    {
+      "height": 840001,
+      "hash": "0000000000000000000234f5e5c5f5e5c5f5e5c5f5e5c5f5e5c5f5e5c5f5e5",
+      "time": 1712345678,
+      "tx_count": 2850,
+      "avg_fee": 12500,
+      "avg_feerate": 42.5,
+      "total_fees": 35625000,
+      "difficulty": 83234567890.123
+    },
+    {
+      "height": 840000,
+      "hash": "0000000000000000000123a4b4a4b4a4b4a4b4a4b4a4b4a4b4a4b4a4b4a4b4a4",
+      "time": 1712345677,
+      "tx_count": 2790,
+      "avg_fee": 11800,
+      "avg_feerate": 38.2,
+      "total_fees": 32922000,
+      "difficulty": 83234567890.123
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "blocks": [
+    {
+      "time": 1712345678,
+      "avg_feerate": 42.5,
+      "avg_fee": 12500,
+      "tx_count": 2850
+    },
+    {
+      "time": 1712345677,
+      "avg_feerate": 38.2,
+      "avg_fee": 11800,
+      "tx_count": 2790
+    }
+  ],
+  "mempool": [
+    {
+      "timestamp": "2024-04-05T12:00:00Z",
+      "tx_count": 45231,
+      "vbytes": 125000000
+    },
+    {
+      "timestamp": "2024-04-05T11:55:00Z",
+      "tx_count": 44890,
+      "vbytes": 124500000
+    }
+  ],
+  "peers": [
+    {
+      "timestamp": "2024-04-05T12:00:00Z",
+      "bytes_sent_delta": 1250,
+      "bytes_recv_delta": 3450
+    }
+  ]
+}

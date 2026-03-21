@@ -1,0 +1,29 @@
+{
+  "draw": 1,
+  "recordsTotal": 12,
+  "recordsFiltered": 12,
+  "data": [
+    {
+      "peer_id": 1,
+      "inbound": false,
+      "subver": "/Satoshi:26.0.0/",
+      "version": 70016,
+      "bytes_sent_total": 1250000,
+      "bytes_recv_total": 3450000,
+      "bytes_sent_delta": 1250,
+      "bytes_recv_delta": 3450,
+      "ping": 45.6
+    },
+    {
+      "peer_id": 2,
+      "inbound": true,
+      "subver": "/Satoshi:25.0.0/",
+      "version": 70015,
+      "bytes_sent_total": 890000,
+      "bytes_recv_total": 1230000,
+      "bytes_sent_delta": 890,
+      "bytes_recv_delta": 1230,
+      "ping": 67.8
+    }
+  ]
+}

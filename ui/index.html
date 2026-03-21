@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Dashboard</title>
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- jQuery (required for DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DataTables JavaScript -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/ui/css/style.css">
+</head>
+<body>
+<div class="container">
+    <!-- Header Section -->
+    <header>
+        <h1><i class="fas fa-bitcoin"></i> Bitcoin Network Dashboard</h1>
+        <div class="last-update">
+            <span>Last update: </span>
+            <span id="update-time">--:--:--</span>
+        </div>
+    </header>
+
+    <!-- Live Statistics Tiles (always visible) -->
+    <div class="tiles">
+        <!-- Last Block Tile -->
+        <div class="tile">
+            <div class="tile-icon"><i class="fas fa-cubes"></i></div>
+            <div class="tile-content">
+                <div class="tile-label">Last block</div>
+                <div class="tile-value" id="last-block">--</div>
+            </div>
+        </div>
+
+        <!-- Mempool Transaction Count Tile -->
+        <div class="tile">
+            <div class="tile-icon"><i class="fas fa-memory"></i></div>
+            <div class="tile-content">
+                <div class="tile-label">Mempool TX</div>
+                <div class="tile-value" id="mempool-count">--</div>
+            </div>
+        </div>
+
+        <!-- Connected Peers Count Tile -->
+        <div class="tile">
+            <div class="tile-icon"><i class="fas fa-exchange-alt"></i></div>
+            <div class="tile-content">
+                <div class="tile-label">Peers</div>
+                <div class="tile-value" id="peer-count">--</div>
+            </div>
+        </div>
+
+        <!-- Network Hashrate Tile -->
+        <div class="tile">
+            <div class="tile-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="tile-content">
+                <div class="tile-label">Hashrate (EH/s)</div>
+                <div class="tile-value" id="hashrate">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-nav">
+        <button class="tab-button active" data-tab="charts">📊 Charts</button>
+        <button class="tab-button" data-tab="blocks">📦 Blocks</button>
+        <button class="tab-button" data-tab="mempool">🔄 Mempool</button>
+        <button class="tab-button" data-tab="peers">🌐 P2P Peers</button>
+    </div>
+
+    <!-- Tab Content Container -->
+    <div class="tabs-content">
+        <!-- Charts Tab -->
+        <div class="tab-pane active" id="tab-charts">
+            <h2><i class="fas fa-chart-line"></i> Network Charts</h2>
+            <div class="charts-row">
+                <!-- Fee Rate Chart Container -->
+                <div class="chart-container">
+                    <canvas id="feeRateChart"></canvas>
+                </div>
+                <!-- Mempool Statistics Chart Container -->
+                <div class="chart-container">
+                    <canvas id="mempoolChart"></canvas>
+                </div>
+                <!-- Bandwidth Usage Chart Container -->
+                <div class="chart-container">
+                    <canvas id="bandwidthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blocks Tab -->
+        <div class="tab-pane" id="tab-blocks">
+            <h2><i class="fas fa-cubes"></i> Block History</h2>
+            <table id="blocks-table" class="display responsive nowrap" style="width:100%">
+                <thead>
+                <tr>
+                    <th>Height</th>
+                    <th>Hash</th>
+                    <th>Time</th>
+                    <th>Transactions</th>
+                    <th>Avg Fee</th>
+                    <th>Avg Fee Rate</th>
+                    <th>Total Fees</th>
+                    <th>Difficulty</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- Mempool Tab -->
+        <div class="tab-pane" id="tab-mempool">
+            <h2><i class="fas fa-memory"></i> Mempool History</h2>
+            <table id="mempool-table" class="display responsive nowrap" style="width:100%">
+                <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>TX Count</th>
+                    <th>vBytes</th>
+                    <th>Total Fees</th>
+                    <th>Min Relay Fee</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+
+        <!-- Peers Tab -->
+        <div class="tab-pane" id="tab-peers">
+            <h2><i class="fas fa-exchange-alt"></i> P2P Peers</h2>
+            <table id="peers-table" class="display responsive nowrap" style="width:100%">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Inbound</th>
+                    <th>Subver</th>
+                    <th>Version</th>
+                    <th>Bytes Sent</th>
+                    <th>Bytes Recv</th>
+                    <th>Delta Sent</th>
+                    <th>Delta Recv</th>
+                    <th>Ping</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Custom JavaScript Files -->
+<script src="/ui/js/main.js"></script>
+<script src="/ui/js/charts.js"></script>
+<script src="/ui/js/tables.js"></script>
+</body>
+</html>
