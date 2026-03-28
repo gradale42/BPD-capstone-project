@@ -1,4 +1,9 @@
 // Tab switching functionality
+
+const USE_MOCK = false; // Установите true для использования моковых данных
+
+const API_BASE = USE_MOCK ? '/api/mock' : '/api';
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded - initializing tabs');
 
@@ -67,3 +72,30 @@ async function updateLiveTiles() {
 function updateTimestamp() {
     document.getElementById('update-time').textContent = new Date().toLocaleTimeString();
 }
+
+async function fetchStats() {
+    try {
+        const response = await fetch(`${API_BASE}/stats`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        document.getElementById('last-block').textContent = data.last_block || '--';
+        document.getElementById('mempool-count').textContent = data.mempool_count || '--';
+        document.getElementById('peer-count').textContent = data.peer_count || '--';
+        document.getElementById('hashrate').textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
+
+        document.getElementById('update-time').textContent = new Date().toLocaleTimeString();
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        document.getElementById('last-block').textContent = 'Error';
+        document.getElementById('mempool-count').textContent = 'Error';
+        document.getElementById('peer-count').textContent = 'Error';
+        document.getElementById('hashrate').textContent = 'Error';
+    }
+}
+
+
+setInterval(fetchStats, 10000);
+fetchStats();

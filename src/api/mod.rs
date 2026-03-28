@@ -1,56 +1,56 @@
+use actix_web::web;
+use std::sync::{Mutex, Arc};
+use bitcoincore_rpc::Client;
+
+pub mod stats;
 pub mod blocks;
 pub mod mempool;
 pub mod peers;
-pub mod historical;
-pub mod live;
 
-use actix_web::{web, HttpResponse};
-use std::fs;
-use std::path::Path;
-pub use blocks::get_blocks;
-pub use mempool::get_mempool;
-pub use peers::get_peers;
-pub use live::get_live;
-pub use historical::get_historical;
+pub struct AppState {
+    pub rpc_client: Mutex<Arc<Client>>,
+}
 
-/// Configure API routes
-pub fn config(cfg: &mut web::ServiceConfig) {
+pub fn config_mock(cfg: &mut web::ServiceConfig) {
+    println!("⚙️  Configuring MOCK API routes...");
 
-    println!("⚙️  Configuring API routes...");  // <-- ДОБ
+    cfg.service(
+        web::scope("/api/mock")
+            .route("/stats", web::get().to(stats::get_mock_stats))
+            .route("/blocks", web::get().to(blocks::get_mock_blocks))
+            .route("/mempool", web::get().to(mempool::get_mock_mempool))
+            .route("/peers", web::get().to(peers::get_mock_peers))
+    );
+
+    println!("✅ MOCK API routes configured");
+}
+
+pub fn config_real(cfg: &mut web::ServiceConfig, rpc_client: Arc<Client>) {
+    println!("⚙️  Configuring REAL API routes...");
+
+    let app_state = web::Data::new(AppState {
+        rpc_client: Mutex::new(rpc_client),
+    });
+
+    cfg.app_data(app_state);
 
     cfg.service(
         web::scope("/api")
-            .route("/blocks", web::get().to(get_blocks))
-            .route("/mempool", web::get().to(get_mempool))
-            .route("/peers", web::get().to(get_peers))
-            .route("/live", web::get().to(get_live))
-            .route("/stats/historical", web::get().to(get_historical))
+            .route("/stats", web::get().to(stats::get_stats))
+            .route("/blocks", web::get().to(blocks::get_blocks))
+            .route("/mempool", web::get().to(mempool::get_mempool))
+            .route("/peers", web::get().to(peers::get_peers))
     );
 
-    println!("✅ API routes configured");  // <-- И ЭТО
+    println!("✅ REAL API routes configured");
 }
 
-/// Helper function to read JSON file
-pub async fn read_json_file(filename: &str) -> HttpResponse {
-    let path = Path::new("./resources").join(filename);
-    println!("📖 Reading file: {:?}", path);  // <-- И ЭТО
+pub fn config(cfg: &mut web::ServiceConfig, rpc_client: Option<Arc<Client>>) {
+    config_mock(cfg);
 
-    match fs::read_to_string(path) {
-        Ok(content) => {
-            match serde_json::from_str::<serde_json::Value>(&content) {
-                Ok(json) => {
-                    println!("✅ Successfully read {}", filename);
-                    HttpResponse::Ok().json(json)
-                },
-                Err(e) => {
-                    println!("❌ Invalid JSON in {}: {}", filename, e);
-                    HttpResponse::InternalServerError().body("Invalid JSON format")
-                }
-            }
-        }
-        Err(e) => {
-            println!("❌ File not found {}: {}", filename, e);
-            HttpResponse::NotFound().body("File not found")
-        }
+    if let Some(rpc) = rpc_client {
+        config_real(cfg, rpc);
+    } else {
+        println!("⚠️  No RPC client available, real endpoints disabled");
     }
 }
