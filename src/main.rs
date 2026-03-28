@@ -1,17 +1,24 @@
 use actix_files as fs;
 use actix_web::{App, HttpServer};
-use bpd_capstone_project::bitcoin::rpc::{connect, connect_to_wallet, import_descriptors, mine_until_positive_balance, setup_mining_address, setup_wallet};
+use bpd_capstone_project::bitcoin::rpc::{connect, setup_wallet};
 use std::io;
 use std::sync::Arc;
+use bitcoincore_rpc::{Auth, Client};
 
 mod api;
+mod bitcoin;
+
+const RPC_URL: &str = "http://localhost:18443";
+const RPC_USER: &str = "alice";
+const RPC_PASS: &str = "password";
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
-    let bitcoin_rpc = match init_bitcoin() {
-        Ok(rpc) => {
+    // Initialize Bitcoin node connection and wallets
+    let rpc_client_info = match init_bitcoin() {
+        Ok((client, url, auth)) => {
             println!("✅ Bitcoin RPC client initialized successfully");
-            Some(Arc::new(rpc))
+            Some((Arc::new(client), url, auth))
         }
         Err(e) => {
             eprintln!("⚠️  Failed to initialize bitcoin client: {}", e);
@@ -23,35 +30,31 @@ async fn main() -> io::Result<()> {
     println!("\n🚀 Server running on http://127.0.0.1:3000");
     println!("📊 Real RPC endpoints: /api/stats, /api/blocks, /api/mempool, /api/peers");
     println!("🎭 Mock endpoints: /api/mock/stats, /api/mock/blocks, /api/mock/mempool, /api/mock/peers");
-    println!("💡 Tip: Use real endpoints for live data, mock endpoints for testing\n");
+    println!("🛠️ Admin endpoints: /api/admin/import-descriptors, /api/admin/mine-blocks\n");
 
     HttpServer::new(move || {
         let mut app = App::new();
-        app = app.configure(|cfg| api::config(cfg, bitcoin_rpc.clone()));
+        app = app.configure(|cfg| api::config(cfg, rpc_client_info.clone()));
         app = app
             .service(fs::Files::new("/ui", "./ui").show_files_listing())
             .service(fs::Files::new("/", "./ui").index_file("index.html"));
         app
     })
-    .bind("127.0.0.1:3000")?
-    .run()
-    .await
+        .bind("127.0.0.1:3000")?
+        .run()
+        .await
 }
 
-fn init_bitcoin() -> Result<bitcoincore_rpc::Client, Box<dyn std::error::Error>> {
+fn init_bitcoin() -> Result<(Client, String, Auth), Box<dyn std::error::Error>> {
     println!("=== Starting bitcoin client ===");
-    let base_rpc = connect()?;
+    let rpc_url = RPC_URL.to_string();
+    let rpc_auth = Auth::UserPass(RPC_USER.to_string(), RPC_PASS.to_string());
 
-    setup_wallet(&base_rpc, "mining_wallet")?;
-    let mining_rpc = connect_to_wallet("mining_wallet")?; 
+    let client = Client::new(&rpc_url, rpc_auth.clone())?;
 
-    let mining_address = setup_mining_address(&mining_rpc)?;
-    mine_until_positive_balance(&mining_rpc, &mining_address)?;
+    // Ensure wallets exist (but do NOT mine or import descriptors)
+    setup_wallet(&client, "mining_wallet")?;
+    setup_wallet(&client, "student")?;
 
-    setup_wallet(&base_rpc, "student")?;
-    let student_rpc = connect_to_wallet("student")?;
-
-    import_descriptors(&student_rpc)?;
-
-    Ok(base_rpc)
+    Ok((client, rpc_url, rpc_auth))
 }

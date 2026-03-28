@@ -1,14 +1,18 @@
 use actix_web::web;
 use std::sync::{Mutex, Arc};
-use bitcoincore_rpc::Client;
+use bitcoincore_rpc::{Auth, Client};
 
 pub mod stats;
 pub mod blocks;
 pub mod mempool;
 pub mod peers;
+pub mod admin;
+mod wallets;
 
 pub struct AppState {
     pub rpc_client: Mutex<Arc<Client>>,
+    pub rpc_url: String,
+    pub rpc_auth: Auth,
 }
 
 pub fn config_mock(cfg: &mut web::ServiceConfig) {
@@ -25,11 +29,16 @@ pub fn config_mock(cfg: &mut web::ServiceConfig) {
     println!("✅ MOCK API routes configured");
 }
 
-pub fn config_real(cfg: &mut web::ServiceConfig, rpc_client: Arc<Client>) {
-    println!("⚙️  Configuring REAL API routes...");
-
+pub fn config_real(
+    cfg: &mut web::ServiceConfig,
+    rpc_client: Arc<Client>,
+    rpc_url: String,
+    rpc_auth: Auth,
+) {
     let app_state = web::Data::new(AppState {
         rpc_client: Mutex::new(rpc_client),
+        rpc_url,
+        rpc_auth,
     });
 
     cfg.app_data(app_state);
@@ -40,16 +49,19 @@ pub fn config_real(cfg: &mut web::ServiceConfig, rpc_client: Arc<Client>) {
             .route("/blocks", web::get().to(blocks::get_blocks))
             .route("/mempool", web::get().to(mempool::get_mempool))
             .route("/peers", web::get().to(peers::get_peers))
+            .route("/admin/import-descriptors", web::post().to(admin::import_descriptors_handler))
+            .route("/admin/mine-blocks", web::post().to(admin::mine_blocks_handler))
+            .route("/wallets", web::get().to(wallets::list_wallets))
+            .route("/wallets/{wallet_name}", web::get().to(wallets::get_wallet_details_handler))
+            .route("/wallets/{wallet_name}/descriptors", web::get().to(wallets::get_descriptors_handler)),
     );
-
-    println!("✅ REAL API routes configured");
 }
 
-pub fn config(cfg: &mut web::ServiceConfig, rpc_client: Option<Arc<Client>>) {
+pub fn config(cfg: &mut web::ServiceConfig, rpc_client: Option<(Arc<Client>, String, Auth)>) {
     config_mock(cfg);
 
-    if let Some(rpc) = rpc_client {
-        config_real(cfg, rpc);
+    if let Some((rpc, url, auth)) = rpc_client {
+        config_real(cfg, rpc, url, auth);
     } else {
         println!("⚠️  No RPC client available, real endpoints disabled");
     }

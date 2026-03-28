@@ -83,6 +83,8 @@
         <button class="tab-button" data-tab="blocks">📦 Blocks</button>
         <button class="tab-button" data-tab="mempool">🔄 Mempool</button>
         <button class="tab-button" data-tab="peers">🌐 P2P Peers</button>
+        <button class="tab-button" data-tab="wallets">💰 Wallets</button>
+        <button class="tab-button" data-tab="admin">🛠️ Admin</button>
     </div>
 
     <!-- Tab Content Container -->
@@ -160,6 +162,75 @@
                 </thead>
             </table>
         </div>
+
+        <div class="tab-pane" id="tab-wallets">
+            <h2><i class="fas fa-wallet"></i> Bitcoin Wallets</h2>
+
+            <!-- Wallet selector -->
+            <div class="wallet-selector">
+                <label for="wallet-select">Select Wallet:</label>
+                <select id="wallet-select" class="wallet-dropdown">
+                    <option value="">Loading wallets...</option>
+                </select>
+                <button id="refresh-wallets-btn" class="refresh-btn">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+
+            <!-- Wallet details -->
+            <div id="wallet-details" class="wallet-details">
+                <div class="wallet-summary">
+                    <div class="wallet-info">
+                        <h3 id="wallet-name-display"></h3>
+                        <div class="wallet-balance">
+                            <span class="label">Total Balance:</span>
+                            <span id="wallet-balance" class="value">-- BTC</span>
+                        </div>
+                        <div class="wallet-address-count">
+                            <span class="label">Addresses:</span>
+                            <span id="address-count" class="value">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Addresses table -->
+                <div class="addresses-section">
+                    <h4><i class="fas fa-address-card"></i> Addresses</h4>
+                    <table id="addresses-table" class="display responsive nowrap" style="width:100%">
+                        <thead>
+                        <tr>
+                            <th>Address</th>
+                            <th>Balance (BTC)</th>
+                            <th>Label</th>
+                            <th>Received (BTC)</th>
+                        </tr>
+                        </thead>
+                        <tbody id="addresses-table-body">
+                        <tr><td colspan="4">Select a wallet to view addresses</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Descriptors section -->
+                <div class="descriptors-section">
+                    <h4><i class="fas fa-code"></i> Descriptors</h4>
+                    <div id="descriptors-content">
+                        <p>Select a wallet to view descriptors</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div class="tab-pane" id="tab-admin">
+            <h2><i class="fas fa-wrench"></i> Admin Actions</h2>
+            <div class="admin-actions">
+                <button id="import-descriptors-btn" class="admin-btn">Import descriptors</button>
+                <button id="mine-blocks-btn" class="admin-btn">Mine 100 blocks</button>
+            </div>
+            <div id="admin-message" class="admin-message"></div>
+        </div>
+
     </div>
 </div>
 
@@ -167,5 +238,8 @@
 <script src="/ui/js/main.js"></script>
 <script src="/ui/js/charts.js"></script>
 <script src="/ui/js/tables.js"></script>
+<script src="/ui/js/admin.js"></script>
+<script src="/ui/js/wallets.js"></script>
+
 </body>
 </html>
