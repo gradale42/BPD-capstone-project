@@ -1,8 +1,11 @@
 use bitcoincore_rpc::bitcoin::{Address, Network};
 use bitcoincore_rpc::{Auth, Client as BitcoinClient, RpcApi};
 use std::error::Error;
+use std::fs;
+use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
+use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
 
 pub fn connect() -> Result<BitcoinClient, Box<dyn std::error::Error>> {
     // Bitcoin RPC client
@@ -95,15 +98,24 @@ pub fn mine_until_positive_balance(rpc: &BitcoinClient, mining_address: &Address
 pub fn import_descriptors(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
     println!("\n=== Importing test wallets ===");
 
-    rpc.createwallet("student",  false, true);
+    rpc.create_wallet("student", None, None, None, None)?;
     let student_wallet = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
         .join("datadir")
         .join("student_wallet.json");
     let student_wallet_data = fs::read_to_string(student_wallet).unwrap();
-    let descriptors: String = student_wallet_data.chars().filter(|c| !c.is_whitespace()).collect();
-    rpc.importdescriptors(descriptors);
+
+    let descriptor = ImportDescriptors {
+        descriptor: student_wallet_data.trim().to_string(),
+        timestamp: Timestamp::Now,
+        active: Some(true),
+        range: None,
+        next_index: None,
+        internal: Some(false),
+        label: None,
+    };
+     rpc.import_descriptors(descriptor)?;
 
     Ok(())
 }

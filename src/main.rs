@@ -3,7 +3,7 @@ use actix_files as fs;
 use actix_web::{App, HttpServer};
 use std::io;
 use std::sync::Arc;
-use bpd_capstone_project::bitcoin::rpc::{connect, mine_until_positive_balance, setup_mining_address, setup_mining_wallet};
+use bpd_capstone_project::bitcoin::rpc::{connect, import_descriptors, mine_until_positive_balance, setup_mining_address, setup_mining_wallet};
 
 mod api;
 
