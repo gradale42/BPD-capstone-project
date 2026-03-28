@@ -8,7 +8,6 @@ use std::time::Duration;
 use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
 
 pub fn connect() -> Result<BitcoinClient, Box<dyn std::error::Error>> {
-    // Bitcoin RPC client
     let bitcoin_rpc = BitcoinClient::new(
         "http://localhost:18443",
         Auth::UserPass("alice".to_string(), "password".to_string()),
@@ -18,39 +17,47 @@ pub fn connect() -> Result<BitcoinClient, Box<dyn std::error::Error>> {
     Ok(bitcoin_rpc)
 }
 
-pub fn setup_mining_wallet(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
-    println!("\n=== Setting up mining wallet ===");
+pub fn connect_to_wallet(wallet_name: &str) -> Result<BitcoinClient, Box<dyn Error>> {
+    let url = format!("http://localhost:18443/wallet/{}", wallet_name);
+    BitcoinClient::new(
+        &url,
+        Auth::UserPass("alice".to_string(), "password".to_string()),
+    ).map_err(|e| e.into())
+}
 
-    if rpc.list_wallets()?.contains(&"mining_wallet".to_string()) {
-        println!("mining_wallet already loaded");
+pub fn setup_wallet(rpc: &BitcoinClient, name: &str) -> Result<(), Box<dyn Error>> {
+    println!("\n=== Setting up {} wallet ===", name);
+
+    if rpc.list_wallets()?.contains(&name.to_string()) {
+        println!("{} already loaded", name);
         return Ok(());
     }
 
-    match rpc.load_wallet("mining_wallet") {
+    match rpc.load_wallet(name) {
         Ok(_) => println!("Loaded existing wallet"),
         Err(e) => {
             let err = e.to_string();
 
             if err.contains("Path does not exist") {
                 println!("Creating new wallet...");
-                rpc.create_wallet("mining_wallet", None, None, None, None)?;
+                rpc.create_wallet(name, None, None, None, None)?;
 
                 for _ in 0..4 {
                     sleep(Duration::from_millis(500));
-                    if rpc.list_wallets()?.contains(&"mining_wallet".to_string()) {
+                    if rpc.list_wallets()?.contains(&name.to_string()) {
                         println!("Auto-loaded");
                         return Ok(());
                     }
                 }
 
-                rpc.load_wallet("mining_wallet")?;
+                rpc.load_wallet(name)?;
                 println!("Manually loaded");
             }
             else if err.contains("lock") {
                 println!("Wallet locked (normal), waiting 1s...");
                 sleep(Duration::from_secs(1));
 
-                if rpc.list_wallets()?.contains(&"mining_wallet".to_string()) {
+                if rpc.list_wallets()?.contains(&name.to_string()) {
                     println!("Now loaded");
                 } else {
                     println!("Still locked but continuing - probably fine");
@@ -98,13 +105,14 @@ pub fn mine_until_positive_balance(rpc: &BitcoinClient, mining_address: &Address
 pub fn import_descriptors(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
     println!("\n=== Importing test wallets ===");
 
-    rpc.create_wallet("student", None, None, None, None)?;
+    setup_wallet(&rpc, "student")?;
+
     let student_wallet = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
         .join("datadir")
         .join("student_wallet.json");
-    let student_wallet_data = fs::read_to_string(student_wallet).unwrap();
+    print!("{:?}", student_wallet);
+    let student_wallet_data = fs::read_to_string(student_wallet)?;
+    print!("{}", student_wallet_data);
 
     let descriptor = ImportDescriptors {
         descriptor: student_wallet_data.trim().to_string(),
@@ -115,7 +123,8 @@ pub fn import_descriptors(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
         internal: Some(false),
         label: None,
     };
-     rpc.import_descriptors(descriptor)?;
+
+    rpc.import_descriptors(descriptor)?;
 
     Ok(())
 }
