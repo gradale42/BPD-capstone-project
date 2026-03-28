@@ -92,6 +92,24 @@ pub fn mine_until_positive_balance(rpc: &BitcoinClient, mining_address: &Address
     Ok(blocks_mined)
 }
 
+pub fn import_descriptors(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
+    println!("\n=== Importing test wallets ===");
+
+    rpc.createwallet("student",  false, true);
+    let student_wallet = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("datadir")
+        .join("student_wallet.json");
+    let student_wallet_data = fs::read_to_string(student_wallet).unwrap();
+    let descriptors: String = student_wallet_data.chars().filter(|c| !c.is_whitespace()).collect();
+    rpc.importdescriptors(descriptors);
+
+    Ok(())
+}
+
+
+
 
 
 

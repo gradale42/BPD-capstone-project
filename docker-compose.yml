@@ -2,6 +2,7 @@ services:
   bitcoind:
     image: lncm/bitcoind:v25.0
     container_name: bitcoind
+    user: "0:0"
     command:
       - -regtest=1
       - -server=1
@@ -11,19 +12,14 @@ services:
       - -rpcuser=alice
       - -rpcpassword=password
       - -fallbackfee=0.0001
+      - -datadir=/home/bitcoin/.bitcoin
     ports:
       - "18443:18443" # RPC
       - "18444:18444" # P2P
     volumes:
-      - bitcoin-data:/home/bitcoin/.bitcoin
+      - ./datadir/node0:/home/bitcoin/.bitcoin
     networks:
       - bpd-network
-
-volumes:
-  bitcoin-data:
-  alice-data:
-  bob-data:
-  carol-data:
 
 networks:
   bpd-network:

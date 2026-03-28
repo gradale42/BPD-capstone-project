@@ -54,5 +54,7 @@ fn init_bitcoin() -> Result<bitcoincore_rpc::Client, Box<dyn std::error::Error>>
     let mining_address = setup_mining_address(&bitcoin_rpc)?;
     mine_until_positive_balance(&bitcoin_rpc, &mining_address)?;
 
+    import_descriptors(&bitcoin_rpc)?;
+
     Ok(bitcoin_rpc)
 }
