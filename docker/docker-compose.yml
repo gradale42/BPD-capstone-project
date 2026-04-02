@@ -21,6 +21,20 @@ services:
     networks:
       - bpd-network
 
+  db:
+    image: postgres
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-bitcoin_dashboard }
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    command: postgres -N 1000
+    networks:
+      - bpd-network
+
 networks:
   bpd-network:
     driver: bridge

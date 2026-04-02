@@ -1,0 +1,31 @@
+# clippy.toml example for a Rust project
+
+# Set the maximum allowed cognitive complexity for a function (default is 25)
+cognitive-complexity-threshold = 30
+
+# Set the maximum allowed number of arguments for a function (default is 7)
+too-many-arguments-threshold = 10
+
+# Disallow specific methods or functions across the codebase
+# This is useful for enforcing safer alternatives
+#disallowed-methods = [
+#    { path = "std::env::set_current_dir", reason = "Use `crate::test_help::SetCurrentDirTempSafe` to safely set the current directory for tests" },
+#    { path = "std::builtins::unreachable", reason = "Use `unreachable!` macro instead" },
+#]
+
+# Disallow specific names (e.g., in variable names or function names)
+# Using ".." extends the default list of disallowed names instead of replacing them
+disallowed-names = ["bar", ".."] # This will disallow "bar", "foo", "baz", and "quux"
+
+# Avoid breaking exported APIs by suggesting changes (default is true)
+avoid-breaking-exported-api = false
+
+check-inconsistent-struct-field-initializers = true
+
+lint-commented-code = true
+
+# Specify the minimum supported Rust version (MSRV) for MSRV lints
+msrv = "1.91.1"
+
+# You can find the full list of configurable options and their descriptions in the official
+# [Clippy Documentation on Lint Configuration](

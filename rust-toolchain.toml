@@ -1,0 +1,6 @@
+[toolchain]
+channel = "stable" # Or "nightly" if you want to use nightly for everything
+
+[toolchain.overrides]
+# Use nightly specifically for the rustfmt component
+rustfmt = "nightly"

@@ -3,6 +3,16 @@ name = "bpd-capstone-project"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "bpd-capstone-project"
+
+[dev-dependencies]
+reqwest = "0.11"
+
 [dependencies]
 bitcoincore-rpc = "0.18.0"
 bitcoin = "0.32.0"
@@ -11,3 +21,16 @@ serde_json = "1.0"
 actix-web = "4.13.0"
 actix-files = "0.6.10"
 chrono = "0.4.44"
+config = "0.15.22"
+
+[dependencies.sqlx]
+version = "0.6"
+default-features = false
+features = [
+    "runtime-actix-rustls",
+    "macros",
+    "postgres",
+    "uuid",
+    "chrono",
+    "migrate"
+]

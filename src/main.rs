@@ -2,8 +2,11 @@ use actix_files as fs;
 use actix_web::{App, HttpServer};
 use bpd_capstone_project::bitcoin::rpc::{connect, setup_wallet};
 use std::io;
+use std::net::TcpListener;
 use std::sync::Arc;
 use bitcoincore_rpc::{Auth, Client};
+use sqlx::PgPool;
+use bpd_capstone_project::configuration::get_configuration;
 
 mod api;
 mod bitcoin;
@@ -27,7 +30,15 @@ async fn main() -> io::Result<()> {
         }
     };
 
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let connection_pool = PgPool::connect(&configuration.database.connection_string())
+        .await
+        .expect("Failed to connect to Postgres.");
+    let address = format!("127.0.0.1:{}", configuration.application_port);
+    let listener = TcpListener::bind(address)?;
+
     println!("\n🚀 Server running on http://127.0.0.1:3000");
+    println!("\n🚀 Postgres running on localhost:5432/bitcoin_dashboard");
     println!("📊 Real RPC endpoints: /api/stats, /api/blocks, /api/mempool, /api/peers");
     println!("🎭 Mock endpoints: /api/mock/stats, /api/mock/blocks, /api/mock/mempool, /api/mock/peers");
     println!("🛠️ Admin endpoints: /api/admin/import-descriptors, /api/admin/mine-blocks\n");
