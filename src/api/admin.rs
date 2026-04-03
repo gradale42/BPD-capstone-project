@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::{Client, RpcApi};
 use serde_json::json;
-use bpd_capstone_project::AppState;
+use crate::AppState;
 use crate::bitcoin::rpc::{import_descriptors, setup_mining_address};
 
 #[derive(Debug, serde::Deserialize)]

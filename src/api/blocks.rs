@@ -2,7 +2,7 @@ use actix_web::{get, web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
-use bpd_capstone_project::AppState;
+use crate::AppState;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BlocksParams {

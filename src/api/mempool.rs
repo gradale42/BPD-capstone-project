@@ -2,6 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
+use crate::AppState;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MempoolParams {
@@ -35,14 +36,11 @@ pub async fn get_mock_mempool(web::Query(params): web::Query<serde_json::Value>)
 }
 
 pub async fn get_mempool(
-    data: web::Data<crate::api::AppState>,
+    state: web::Data<AppState>,
     web::Query(params): web::Query<MempoolParams>,
 ) -> impl Responder {
-    match data.rpc_client.lock() {
+    match state.get_default_bitcoin_client().lock() {
         Ok(client) => {
-
-            let rpc_client = &**client;
-
             let mempool_info = match client.get_mempool_info() {
                 Ok(info) => info,
                 Err(e) => {

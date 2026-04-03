@@ -1,11 +1,12 @@
 use std::fs;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
 use actix_web::dev::Server;
 use bitcoincore_rpc::{Auth, Client};
 use sqlx::PgPool;
 use dashmap::DashMap;
+use serde_json::json;
 use crate::configuration::get_configuration;
 
 pub mod api;
@@ -20,9 +21,11 @@ pub struct AppState {
 }
 
 impl AppState {
+
     pub fn get_default_bitcoin_client(&self) -> Arc<Mutex<Client>> {
         self.get_bitcoin_client("")
     }
+
     pub fn get_bitcoin_client(&self, wallet_name: &str) -> Arc<Mutex<Client>> {
         let entry = self.bitcoin_clients.entry(wallet_name.to_string()).or_insert_with(|| {
 
@@ -43,6 +46,31 @@ impl AppState {
             Arc::new(Mutex::new(client))
         });
         entry.value().clone()
+    }
+
+    pub async fn execute_rpc<F, R>(&self, wallet_name: &str, f: F) -> HttpResponse
+    where
+        F: FnOnce(&bitcoincore_rpc::Client) -> Result<R, bitcoincore_rpc::Error> + Send + 'static,
+        R: serde::Serialize + Send + 'static,
+    {
+        let client_arc = self.get_bitcoin_client(wallet_name);
+
+        let result = web::block(move || {
+            let client = client_arc.lock().map_err(|_| "Lock error")?;
+            f(&*client).map_err(|e| e.to_string())
+        }).await;
+
+        match result {
+            Ok(Ok(data)) => HttpResponse::Ok().json(data),
+            Ok(Err(e)) => HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": e
+            })),
+            Err(_) => HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": "Internal thread pool error"
+            })),
+        }
     }
 
 }

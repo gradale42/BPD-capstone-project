@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use serde_json::{json, Value};
-use bpd_capstone_project::AppState;
+use crate::AppState;
 
 #[derive(Debug, serde::Serialize)]
 pub struct WalletInfo {
@@ -40,36 +40,41 @@ pub struct DescriptorInfo {
 }
 
 pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
-    let wallets_result = web::block({
+    // 1. Get the list of names using the default client
+    let names_result = web::block({
         let state = state.clone();
         move || {
-            let client = state.get_default_bitcoin_client().lock().map_err(|_| "Lock error")?;
+            let client_arc = state.get_default_bitcoin_client();
+            let client = client_arc.lock().map_err(|_| "Lock error".to_string())?;
+            // Convert bitcoincore_rpc::Error to String immediately
             client.list_wallets().map_err(|e| e.to_string())
         }
     }).await;
 
-    let wallet_names = match wallets_result {
+    let wallet_names = match names_result {
         Ok(Ok(names)) => names,
-        _ => return HttpResponse::InternalServerError().json(json!({"status": "error", "message": "Failed to list wallets"})),
+        _ => return HttpResponse::InternalServerError().json(json!({"error": "Failed to list wallets"})),
     };
 
+    // 2. Fetch details for each wallet
     let mut wallet_infos = Vec::new();
 
     for name in wallet_names {
-        let state = state.clone();
-    
-        let info = web::block(move || {
-            let client_lock = state.get_bitcoin_client(&name);
-            let client = client_lock.lock().map_err(|_| "Lock error")?;
+        let name_for_err = name.clone();
+        let state_clone = state.clone();
 
-            get_wallet_details(&client, &name)
+        let info = web::block(move || {
+            let client_arc = state_clone.get_bitcoin_client(&name);
+            let client = client_arc.lock().map_err(|_| "Lock error".to_string())?;
+
+            get_wallet_details(&client, &name).map_err(|e| e.to_string())
         })
-            .await
+        .await
         .map(|res| res.unwrap_or_else(|e| {
-            eprintln!("Error for wallet {}: {}", name, e);
-            WalletInfo::default_with_name(name.clone()) 
+            eprintln!("Error for wallet {}: {}", name_for_err, e);
+            WalletInfo::default_with_name(name_for_err.clone())
         }))
-        .unwrap_or_else(|_| WalletInfo::default_with_name(name.clone()));
+        .unwrap_or_else(|_| WalletInfo::default_with_name(name_for_err));
 
         wallet_infos.push(info);
     }
@@ -79,6 +84,8 @@ pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
         "wallets": wallet_infos
     }))
 }
+
+
 
 pub async fn get_wallet_details_handler(
     state: web::Data<AppState>,
