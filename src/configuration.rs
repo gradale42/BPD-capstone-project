@@ -1,8 +1,5 @@
-use std::sync::{Arc, Mutex};
+use crate::api::{blocks, mempool, peers, stats};
 use actix_web::web;
-use bitcoincore_rpc::{Auth, Client};
-use crate::api::{admin, blocks, mempool, peers, stats, wallets};
-use crate::AppState;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {

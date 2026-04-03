@@ -28,7 +28,7 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
-pub async fn get_mock_mempool(web::Query(params): web::Query<serde_json::Value>) -> impl Responder {
+pub async fn get_mock_mempool(web::Query(_params): web::Query<serde_json::Value>) -> impl Responder {
     match fs::read_to_string("resources/mempool_history.json") {
         Ok(content) => HttpResponse::Ok().json(json!(content)),
         Err(e) => HttpResponse::InternalServerError().body(format!("Error reading file: {}", e)),

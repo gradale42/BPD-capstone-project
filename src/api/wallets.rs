@@ -1,5 +1,5 @@
 use actix_web::{web, HttpResponse, Responder};
-use bitcoincore_rpc::{Auth, Client, RpcApi};
+use bitcoincore_rpc::{Client, RpcApi};
 use serde_json::{json, Value};
 use crate::AppState;
 
@@ -89,10 +89,9 @@ pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
 
 pub async fn get_wallet_details_handler(
     state: web::Data<AppState>,
-    wallet_name: &str,
+    wallet_name: web::Path<String>,
 ) -> impl Responder {
-
-    match state.get_bitcoin_client(wallet_name).lock() {
+    match state.get_bitcoin_client(&wallet_name).lock() {
         Ok(wallet_client) => {
             match get_wallet_details(&wallet_client, &wallet_name) {
                 Ok(info) => HttpResponse::Ok().json(json!({
@@ -114,10 +113,9 @@ pub async fn get_wallet_details_handler(
 
 pub async fn get_descriptors_handler(
     state: web::Data<AppState>,
-    wallet_name: &str,
+    wallet_name: web::Path<String>,
 ) -> impl Responder {
-  
-    match state.get_bitcoin_client(wallet_name).lock() {
+    match state.get_bitcoin_client(&wallet_name).lock() {
         Ok(wallet_client) => {
             let params: Vec<Value> = vec![json!(false)];
 

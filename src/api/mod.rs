@@ -6,8 +6,6 @@ pub mod admin;
 pub mod wallets;
 
 use actix_web::web;
-use bpd_capstone_project::AppState;
-
 
 pub fn config_mock(cfg: &mut web::ServiceConfig) {
     println!("⚙️  Configuring MOCK API routes...");

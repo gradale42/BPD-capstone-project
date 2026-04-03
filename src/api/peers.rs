@@ -1,4 +1,4 @@
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
@@ -32,7 +32,7 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
-pub async fn get_mock_peers(web::Query(params): web::Query<serde_json::Value>) -> impl Responder {
+pub async fn get_mock_peers(web::Query(_params): web::Query<serde_json::Value>) -> impl Responder {
     match fs::read_to_string("resources/peers.json") {
         Ok(content) => HttpResponse::Ok().json(json!(content)),
         Err(e) => HttpResponse::InternalServerError().body(format!("Error reading file: {}", e)),

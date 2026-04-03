@@ -1,4 +1,6 @@
-use std::fs;
+#![allow(unused)]
+
+use actix_files as actix_fs;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
 use actix_web::{web, App, HttpResponse, HttpServer};
@@ -7,6 +9,7 @@ use bitcoincore_rpc::{Auth, Client};
 use sqlx::PgPool;
 use dashmap::DashMap;
 use serde_json::json;
+use crate::bitcoin::rpc::setup_wallet;
 use crate::configuration::get_configuration;
 
 pub mod api;
@@ -50,26 +53,36 @@ impl AppState {
 
     pub async fn execute_rpc<F, R>(&self, wallet_name: &str, f: F) -> HttpResponse
     where
+    // F must be Send to go into web::block
+    // R must be Serialize to be returned as JSON
         F: FnOnce(&bitcoincore_rpc::Client) -> Result<R, bitcoincore_rpc::Error> + Send + 'static,
         R: serde::Serialize + Send + 'static,
     {
         let client_arc = self.get_bitcoin_client(wallet_name);
 
         let result = web::block(move || {
-            let client = client_arc.lock().map_err(|_| "Lock error")?;
-            f(&*client).map_err(|e| e.to_string())
+            let client_guard = client_arc.lock().map_err(|_| "Lock poisoning error".to_string())?;
+
+            // CRITICAL: Convert the Result<R, bitcoincore_rpc::Error>
+            // into Result<R, String> HERE, before returning from the closure.
+            f(&*client_guard).map_err(|e| e.to_string())
         }).await;
 
         match result {
-            Ok(Ok(data)) => HttpResponse::Ok().json(data),
-            Ok(Err(e)) => HttpResponse::InternalServerError().json(json!({
-                "status": "error",
-                "message": e
-            })),
-            Err(_) => HttpResponse::InternalServerError().json(json!({
-                "status": "error",
-                "message": "Internal thread pool error"
-            })),
+            // result is Result<Result<R, String>, BlockingError>
+            //Ok(Ok(data)) => HttpResponse::Ok().json(data),
+        Ok(Ok(data)) => HttpResponse::Ok().json(json!({
+            "status": "success",
+            "data": data
+        })),
+            Ok(Err(rpc_err_string)) => HttpResponse::InternalServerError().json(json!({
+            "status": "error",
+            "message": rpc_err_string
+        })),
+            Err(e) => HttpResponse::InternalServerError().json(json!({
+            "status": "error",
+            "message": format!("Thread pool error: {}", e)
+        })),
         }
     }
 
@@ -82,8 +95,27 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         db_pool,
     });
 
-    println!("\n🚀 Server running on http://127.0.0.1:3000");
-    println!("\n🚀 Postgres running on localhost:5432/bitcoin_dashboard");
+    println!("=== Starting bitcoin client ===");
+    match app_state.get_default_bitcoin_client().lock() {
+        Ok(client) => {
+            setup_wallet(&client, "mining_wallet");
+            setup_wallet(&client, "student");
+        },
+        Err(e) => {
+            eprintln!("⚠️  Failed to initialize bitcoin client: {}", e);
+            eprintln!("⚠️  Starting with mock data only");
+        }
+    };
+
+    let config = get_configuration().expect("Failed to read configuration.");
+    println!("\n================================================");
+    println!("🌐 WEB SERVER:    http://127.0.0.1:{}", config.application_port);
+    println!("🐘 POSTGRES:      {}:{}", config.database.host, config.database.port);
+    println!("📀 DATABASE:      {}", config.database.database_name);
+    println!("₿  BITCOIN RPC:   {}", config.bitcoin.rpc_url);
+    println!("👤 RPC USER:      {}", config.bitcoin.rpc_user);
+    println!("================================================\n");
+
     println!("📊 Real RPC endpoints: /api/stats, /api/blocks, /api/mempool, /api/peers");
     println!("🎭 Mock endpoints: /api/mock/stats, /api/mock/blocks, /api/mock/mempool, /api/mock/peers");
     println!("🛠️ Admin endpoints: /api/admin/import-descriptors, /api/admin/mine-blocks\n");
@@ -92,8 +124,8 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         App::new()
             .app_data(app_state.clone())
             .configure(api::config)
-            .service(fs::Files::new("/ui", "./ui").show_files_listing())
-            .index_file("index.html")
+            .service(actix_fs::Files::new("/ui", "./ui").show_files_listing())
+            .service(actix_fs::Files::new("/", "./ui").index_file("index.html"))
     })
     .listen(listener)?
     .run();

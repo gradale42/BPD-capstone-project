@@ -1,5 +1,5 @@
 use actix_web::{web, HttpResponse, Responder};
-use bitcoincore_rpc::{Client, RpcApi};
+use bitcoincore_rpc::{RpcApi};
 use serde_json::json;
 use crate::AppState;
 use crate::bitcoin::rpc::{import_descriptors, setup_mining_address};
@@ -44,17 +44,26 @@ pub async fn mine_blocks_handler(state: web::Data<AppState>, query: web::Query<M
         Ok(mining_client) => {
             match setup_mining_address(&mining_client) {
                 Ok(mining_address) => {
-                    match mining_client.generate_to_address(count as u64, &mining_address) {
-                        Ok(block_hashes) => HttpResponse::Ok().json(json!({
-                            "status": "success",
-                            "message": format!("Mined {} blocks", count),
-                            "blocks": block_hashes,
-                        })),
-                        Err(e) => HttpResponse::InternalServerError().json(json!({
-                            "status": "error",
-                            "message": format!("Mining failed: {}", e)
-                        })),
-                    }
+                    println!("\n=== Start up mining {} blocks to address {} ===", count, mining_address);
+                    let response = match mining_client.generate_to_address(count as u64, &mining_address) {
+                        Ok(block_hashes) => {
+                            println!("Mined blocks count: {}", block_hashes.len());
+                               HttpResponse::Ok().json(json!({
+                                "status": "success",
+                                "message": format!("Mined {} blocks", count),
+                                "blocks": block_hashes,
+                            }))
+                        },
+                        Err(e) => {
+                            println!("❌ Mining error: {}", e);
+                            HttpResponse::InternalServerError().json(json!({
+                                "status": "error",
+                                "message": format!("Mining failed: {}", e)
+                            }))
+                        }
+                    };
+                    println!("\n=== Done ===");
+                    response
                 }
                 Err(e) => HttpResponse::InternalServerError().json(json!({
                     "status": "error",
