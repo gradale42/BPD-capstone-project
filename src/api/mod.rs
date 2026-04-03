@@ -1,19 +1,13 @@
-use actix_web::web;
-use std::sync::{Mutex, Arc};
-use bitcoincore_rpc::{Auth, Client};
-
 pub mod stats;
 pub mod blocks;
 pub mod mempool;
 pub mod peers;
 pub mod admin;
-mod wallets;
+pub mod wallets;
 
-pub struct AppState {
-    pub rpc_client: Mutex<Arc<Client>>,
-    pub rpc_url: String,
-    pub rpc_auth: Auth,
-}
+use actix_web::web;
+use bpd_capstone_project::AppState;
+
 
 pub fn config_mock(cfg: &mut web::ServiceConfig) {
     println!("⚙️  Configuring MOCK API routes...");
@@ -30,19 +24,8 @@ pub fn config_mock(cfg: &mut web::ServiceConfig) {
 }
 
 pub fn config_real(
-    cfg: &mut web::ServiceConfig,
-    rpc_client: Arc<Client>,
-    rpc_url: String,
-    rpc_auth: Auth,
+    cfg: &mut web::ServiceConfig
 ) {
-    let app_state = web::Data::new(AppState {
-        rpc_client: Mutex::new(rpc_client),
-        rpc_url,
-        rpc_auth,
-    });
-
-    cfg.app_data(app_state);
-
     cfg.service(
         web::scope("/api")
             .route("/stats", web::get().to(stats::get_stats))
@@ -57,12 +40,15 @@ pub fn config_real(
     );
 }
 
-pub fn config(cfg: &mut web::ServiceConfig, rpc_client: Option<(Arc<Client>, String, Auth)>) {
+pub fn config(cfg: &mut web::ServiceConfig) {
+    config_real(cfg);
+    /*
     config_mock(cfg);
 
     if let Some((rpc, url, auth)) = rpc_client {
-        config_real(cfg, rpc, url, auth);
+        config_real(cfg, appState);
     } else {
         println!("⚠️  No RPC client available, real endpoints disabled");
     }
+    */
 }

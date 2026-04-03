@@ -28,7 +28,7 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-bitcoin_dashboard }
+      POSTGRES_DB: ${POSTGRES_DB:-bitcoin_dashboard}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     command: postgres -N 1000

@@ -1,8 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::{Client, RpcApi};
 use serde_json::json;
-
-use crate::api::AppState;
+use bpd_capstone_project::AppState;
 use crate::bitcoin::rpc::{import_descriptors, setup_mining_address};
 
 #[derive(Debug, serde::Deserialize)]
@@ -12,9 +11,7 @@ pub struct MineParams {
 
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
     // Build wallet client for "student"
-    let wallet_url = format!("{}/wallet/student", state.rpc_url);
-
-    match Client::new(&wallet_url, state.rpc_auth.clone()) {
+    match state.get_bitcoin_client("student").lock() {
         Ok(student_client) => {
             match import_descriptors(&student_client) {
                 Ok(_) => HttpResponse::Ok().json(json!({
@@ -43,10 +40,7 @@ pub async fn mine_blocks_handler(state: web::Data<AppState>, query: web::Query<M
         }));
     }
 
-    // Build wallet client for "mining_wallet"
-    let wallet_url = format!("{}/wallet/mining_wallet", state.rpc_url);
-
-    match Client::new(&wallet_url, state.rpc_auth.clone()) {
+    match state.get_bitcoin_client("mining_wallet").lock() {
         Ok(mining_client) => {
             match setup_mining_address(&mining_client) {
                 Ok(mining_address) => {

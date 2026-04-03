@@ -5,19 +5,15 @@ use std::io;
 use std::net::TcpListener;
 use std::sync::Arc;
 use bitcoincore_rpc::{Auth, Client};
-use sqlx::PgPool;
+use sqlx::{PgPool, Pool, Postgres};
 use bpd_capstone_project::configuration::get_configuration;
 
 mod api;
 mod bitcoin;
 
-const RPC_URL: &str = "http://localhost:18443";
-const RPC_USER: &str = "alice";
-const RPC_PASS: &str = "password";
-
 #[actix_web::main]
 async fn main() -> io::Result<()> {
-    // Initialize Bitcoin node connection and wallets
+
     let rpc_client_info = match init_bitcoin() {
         Ok((client, url, auth)) => {
             println!("✅ Bitcoin RPC client initialized successfully");
@@ -30,12 +26,8 @@ async fn main() -> io::Result<()> {
         }
     };
 
-    let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection_pool = PgPool::connect(&configuration.database.connection_string())
-        .await
-        .expect("Failed to connect to Postgres.");
-    let address = format!("127.0.0.1:{}", configuration.application_port);
-    let listener = TcpListener::bind(address)?;
+    let connection_pool = init_database();
+    let listener = init_api_listener();
 
     println!("\n🚀 Server running on http://127.0.0.1:3000");
     println!("\n🚀 Postgres running on localhost:5432/bitcoin_dashboard");
@@ -58,8 +50,9 @@ async fn main() -> io::Result<()> {
 
 fn init_bitcoin() -> Result<(Client, String, Auth), Box<dyn std::error::Error>> {
     println!("=== Starting bitcoin client ===");
-    let rpc_url = RPC_URL.to_string();
-    let rpc_auth = Auth::UserPass(RPC_USER.to_string(), RPC_PASS.to_string());
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let rpc_url = configuration.bitcoin.rpc_url;
+    let rpc_auth = Auth::UserPass(configuration.bitcoin.rpc_user, configuration.bitcoin.rpc_password);
 
     let client = Client::new(&rpc_url, rpc_auth.clone())?;
 
@@ -68,4 +61,19 @@ fn init_bitcoin() -> Result<(Client, String, Auth), Box<dyn std::error::Error>> 
     setup_wallet(&client, "student")?;
 
     Ok((client, rpc_url, rpc_auth))
+}
+
+fn init_database() -> Pool<Postgres> {
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let db_url = configuration.database.connection_string();
+    PgPool::connect(&db_url)
+        .await
+        .expect("Failed to connect to Postgres.")
+}
+
+fn init_api_listener() -> TcpListener{
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let address = format!("127.0.0.1:{}", configuration.application_port);
+    let listener = TcpListener::bind(address)?;
+    listener
 }

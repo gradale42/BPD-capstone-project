@@ -1,9 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use serde_json::{json, Value};
-use std::sync::Arc;
-
-use crate::api::AppState;
+use bpd_capstone_project::AppState;
 
 #[derive(Debug, serde::Serialize)]
 pub struct WalletInfo {
@@ -11,6 +9,17 @@ pub struct WalletInfo {
     pub balance: f64,
     pub address_count: usize,
     pub addresses: Vec<AddressInfo>,
+}
+
+impl WalletInfo {
+    fn default_with_name(name: String) -> Self {
+        Self {
+            name,
+            balance: 0.0,
+            address_count: 0,
+            addresses: vec![],
+        }
+    }
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -31,62 +40,52 @@ pub struct DescriptorInfo {
 }
 
 pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
-    match Client::new(&state.rpc_url, state.rpc_auth.clone()) {
-        Ok(client) => {
-            match client.list_wallets() {
-                Ok(wallets) => {
-                    let mut wallet_infos = Vec::new();
-
-                    for wallet_name in wallets {
-                        let wallet_url = format!("{}/wallet/{}", state.rpc_url, wallet_name);
-                        if let Ok(wallet_client) = Client::new(&wallet_url, state.rpc_auth.clone()) {
-                            match get_wallet_details(&wallet_client, &wallet_name) {
-                                Ok(info) => wallet_infos.push(info),
-                                Err(e) => {
-                                    eprintln!("Error getting details for wallet {}: {}", wallet_name, e);
-                                    wallet_infos.push(WalletInfo {
-                                        name: wallet_name,
-                                        balance: 0.0,
-                                        address_count: 0,
-                                        addresses: vec![],
-                                    });
-                                }
-                            }
-                        } else {
-                            wallet_infos.push(WalletInfo {
-                                name: wallet_name,
-                                balance: 0.0,
-                                address_count: 0,
-                                addresses: vec![],
-                            });
-                        }
-                    }
-
-                    HttpResponse::Ok().json(json!({
-                        "status": "success",
-                        "wallets": wallet_infos
-                    }))
-                }
-                Err(e) => HttpResponse::InternalServerError().json(json!({
-                    "status": "error",
-                    "message": format!("Failed to list wallets: {}", e)
-                }))
-            }
+    let wallets_result = web::block({
+        let state = state.clone();
+        move || {
+            let client = state.get_default_bitcoin_client().lock().map_err(|_| "Lock error")?;
+            client.list_wallets().map_err(|e| e.to_string())
         }
-        Err(e) => HttpResponse::InternalServerError().json(json!({
-            "status": "error",
-            "message": format!("Failed to connect to RPC: {}", e)
+    }).await;
+
+    let wallet_names = match wallets_result {
+        Ok(Ok(names)) => names,
+        _ => return HttpResponse::InternalServerError().json(json!({"status": "error", "message": "Failed to list wallets"})),
+    };
+
+    let mut wallet_infos = Vec::new();
+
+    for name in wallet_names {
+        let state = state.clone();
+    
+        let info = web::block(move || {
+            let client_lock = state.get_bitcoin_client(&name);
+            let client = client_lock.lock().map_err(|_| "Lock error")?;
+
+            get_wallet_details(&client, &name)
+        })
+            .await
+        .map(|res| res.unwrap_or_else(|e| {
+            eprintln!("Error for wallet {}: {}", name, e);
+            WalletInfo::default_with_name(name.clone()) 
         }))
+        .unwrap_or_else(|_| WalletInfo::default_with_name(name.clone()));
+
+        wallet_infos.push(info);
     }
+
+    HttpResponse::Ok().json(json!({
+        "status": "success",
+        "wallets": wallet_infos
+    }))
 }
 
 pub async fn get_wallet_details_handler(
     state: web::Data<AppState>,
-    wallet_name: web::Path<String>,
+    wallet_name: &str,
 ) -> impl Responder {
-    let wallet_url = format!("{}/wallet/{}", state.rpc_url, wallet_name);
 
-    match Client::new(&wallet_url, state.rpc_auth.clone()) {
+    match state.get_bitcoin_client(wallet_name).lock() {
         Ok(wallet_client) => {
             match get_wallet_details(&wallet_client, &wallet_name) {
                 Ok(info) => HttpResponse::Ok().json(json!({
@@ -108,11 +107,10 @@ pub async fn get_wallet_details_handler(
 
 pub async fn get_descriptors_handler(
     state: web::Data<AppState>,
-    wallet_name: web::Path<String>,
+    wallet_name: &str,
 ) -> impl Responder {
-    let wallet_url = format!("{}/wallet/{}", state.rpc_url, wallet_name);
-
-    match Client::new(&wallet_url, state.rpc_auth.clone()) {
+  
+    match state.get_bitcoin_client(wallet_name).lock() {
         Ok(wallet_client) => {
             let params: Vec<Value> = vec![json!(false)];
 

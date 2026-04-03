@@ -2,7 +2,7 @@ use actix_web::{get, web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
-
+use bpd_capstone_project::AppState;
 
 #[derive(Debug, serde::Serialize)]
 pub struct DashboardStats {
@@ -19,12 +19,11 @@ pub async fn get_mock_stats() -> impl Responder {
     }
 }
 
-pub async fn get_stats(data: web::Data<crate::api::AppState>) -> impl Responder {
-    match data.rpc_client.lock() {
+pub async fn get_stats(state: web::Data<AppState>) -> impl Responder {
+    match state.get_default_bitcoin_client().lock() {
         Ok(client) => {
-            let rpc_client = &**client;
 
-            let blockchain_info = match rpc_client.get_blockchain_info() {
+            let blockchain_info = match client.get_blockchain_info() {
                 Ok(info) => info,
                 Err(e) => {
                     eprintln!("Error getting blockchain info: {}", e);
@@ -34,7 +33,7 @@ pub async fn get_stats(data: web::Data<crate::api::AppState>) -> impl Responder 
                 }
             };
 
-            let mempool_info = match rpc_client.get_mempool_info() {
+            let mempool_info = match client.get_mempool_info() {
                 Ok(info) => info,
                 Err(e) => {
                     eprintln!("Error getting mempool info: {}", e);
@@ -44,7 +43,7 @@ pub async fn get_stats(data: web::Data<crate::api::AppState>) -> impl Responder 
                 }
             };
 
-            let peers = match rpc_client.get_peer_info() {
+            let peers = match client.get_peer_info() {
                 Ok(peers) => peers,
                 Err(e) => {
                     eprintln!("Error getting peer info: {}", e);

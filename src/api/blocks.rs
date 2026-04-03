@@ -2,7 +2,7 @@ use actix_web::{get, web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
-
+use bpd_capstone_project::AppState;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BlocksParams {
@@ -51,13 +51,12 @@ pub async fn get_mock_blocks(web::Query(params): web::Query<serde_json::Value>) 
 }
 
 pub async fn get_blocks(
-    data: web::Data<crate::api::AppState>,
+    state: web::Data<AppState>,
     web::Query(params): web::Query<BlocksParams>,
 ) -> impl Responder {
-    match data.rpc_client.lock() {
+    match state.get_default_bitcoin_client().lock() {
         Ok(client) => {
-            let rpc_client = &**client;
-            
+   
             let blockchain_info = match client.get_blockchain_info() {
                 Ok(info) => info,
                 Err(e) => {
