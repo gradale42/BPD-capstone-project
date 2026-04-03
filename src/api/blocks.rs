@@ -1,8 +1,9 @@
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::fs;
 use crate::AppState;
+use bitcoincore_rpc::bitcoin::Witness;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct BlocksParams {

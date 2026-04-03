@@ -21,6 +21,10 @@
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
 
+    <!-- JSON Viewer -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsonviewer@1.0.0/dist/jquery.jsonviewer.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jsonviewer@1.0.0/dist/jquery.jsonviewer.min.js"></script>
+
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -234,9 +238,43 @@
     </div>
 </div>
 
+<div id="block-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-cube"></i> Block Details</h2>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="block-info">
+                <div class="info-row">
+                    <span class="info-label">Height:</span>
+                    <span id="block-height" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hash:</span>
+                    <span id="block-hash" class="info-value hash-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Time:</span>
+                    <span id="block-time" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Transactions:</span>
+                    <span id="block-tx-count" class="info-value"></span>
+                </div>
+            </div>
+            <div class="json-viewer-container">
+                <h3><i class="fas fa-code"></i> Full Block Data (JSON)</h3>
+                <div id="block-json-viewer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Custom JavaScript Files -->
 <script src="/ui/js/main.js"></script>
 <script src="/ui/js/charts.js"></script>
+<script src="/ui/js/block-details.js"></script>
 <script src="/ui/js/tables.js"></script>
 <script src="/ui/js/admin.js"></script>
 <script src="/ui/js/wallets.js"></script>

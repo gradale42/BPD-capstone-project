@@ -19,11 +19,23 @@ function initTables() {
             }
         },
         columns: [
-            { data: 'height' },
+            {
+                data: 'height',
+                render: function(data, type, row) {
+                    if (type === 'display') {
+                        return `<span class="block-link" style="cursor:pointer;color:#f7931a;" data-height="${data}" data-hash="${row.hash}">${data}</span>`;
+                    }
+                    return data;
+                }
+            },
             {
                 data: 'hash',
-                render: function(data) {
-                    return data.substring(0, 8) + '...' + data.substring(data.length - 8);
+                render: function(data, type, row) {
+                    if (type === 'display') {
+                        const shortHash = data.substring(0, 8) + '...' + data.substring(data.length - 8);
+                        return `<span class="block-link" style="cursor:pointer;color:#f7931a;" data-height="${row.height}" data-hash="${data}" title="${data}">${shortHash}</span>`;
+                    }
+                    return data;
                 }
             },
             {
@@ -42,8 +54,29 @@ function initTables() {
         pageLength: 25,
         responsive: true,
         dom: 'Bfrtip',
-        buttons: ['copy', 'csv', 'excel', 'pdf']
+        buttons: ['copy', 'csv', 'excel', 'pdf'],
+        drawCallback: function() {
+            // Attach click handlers to all block links
+            document.querySelectorAll('.block-link').forEach(el => {
+                el.removeEventListener('click', handleBlockClick);
+                el.addEventListener('click', handleBlockClick);
+            });
+        }
     });
+
+    function handleBlockClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const height = this.getAttribute('data-height');
+        const hash = this.getAttribute('data-hash');
+        console.log(`Opening block details: height=${height}, hash=${hash}`);
+        if (typeof showBlockDetails === 'function') {
+            showBlockDetails(height, hash);
+        } else {
+            console.error('showBlockDetails function not found');
+        }
+        return false;
+    }
 
     // mempool history table
     mempoolTable = $('#mempool-table').DataTable({

@@ -1,5 +1,6 @@
 pub mod stats;
 pub mod blocks;
+pub mod block;
 pub mod mempool;
 pub mod peers;
 pub mod admin;
@@ -34,7 +35,8 @@ pub fn config_real(
             .route("/admin/mine-blocks", web::post().to(admin::mine_blocks_handler))
             .route("/wallets", web::get().to(wallets::list_wallets))
             .route("/wallets/{wallet_name}", web::get().to(wallets::get_wallet_details_handler))
-            .route("/wallets/{wallet_name}/descriptors", web::get().to(wallets::get_descriptors_handler)),
+            .route("/wallets/{wallet_name}/descriptors", web::get().to(wallets::get_descriptors_handler))
+            .route("/block/{block_hash}", web::get().to(block::get_block_by_hash)),
     );
 }
 
