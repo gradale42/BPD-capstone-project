@@ -1,12 +1,9 @@
 #![allow(unused)]
 
-use bpd_capstone_project::configuration::get_configuration;
-use bpd_capstone_project::{run, AppState};
+use bitcoin_dashboard::configuration::get_configuration;
+use bitcoin_dashboard::{run, AppState};
 use sqlx::{PgPool, Pool, Postgres};
 use std::net::TcpListener;
-
-mod api;
-mod bitcoin;
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

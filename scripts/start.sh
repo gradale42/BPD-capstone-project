@@ -16,8 +16,8 @@ echo " Docker started."
 
 sleep 5
 
->&2 echo "Postgres has been migrated, ready to go!"
+./scripts/init_db.sh
 
 cargo run
 
-./scripts/init_db.sh
+

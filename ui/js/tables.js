@@ -45,9 +45,9 @@ function initTables() {
                 }
             },
             { data: 'tx_count' },
-            { data: 'avg_fee' },
+            { data: 'avg_fee_sat' },
             { data: 'avg_feerate' },
-            { data: 'total_fees' },
+            { data: 'total_fees_sat' },
             { data: 'difficulty' }
         ],
         order: [[0, 'desc']],

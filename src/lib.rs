@@ -1,5 +1,11 @@
 #![allow(unused)]
 
+pub mod domain;
+pub mod configuration;
+pub mod api;
+pub mod services;
+pub mod repositories;
+
 use actix_files as actix_fs;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex};
@@ -9,14 +15,9 @@ use bitcoincore_rpc::{Auth, Client};
 use sqlx::PgPool;
 use dashmap::DashMap;
 use serde_json::json;
-use crate::bitcoin::rpc::setup_wallet;
-use crate::configuration::get_configuration;
+use configuration::get_configuration;
+use services::bitcoin::rpc::setup_wallet;
 
-pub mod api;
-
-pub mod bitcoin;
-
-pub mod configuration;
 
 pub struct AppState {
     pub bitcoin_clients: DashMap<String, Arc<Mutex<Client>>>,

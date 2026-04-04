@@ -1,6 +1,6 @@
 // Tab switching functionality
 
-const USE_MOCK = false; // Установите true для использования моковых данных
+const USE_MOCK = false;
 
 const API_BASE = USE_MOCK ? '/api/mock' : '/api';
 
