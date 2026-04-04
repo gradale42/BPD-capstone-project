@@ -1,2 +1,2 @@
 pub mod bitcoin;
-mod block_service;
+pub mod block_service;

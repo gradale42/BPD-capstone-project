@@ -1,33 +1,31 @@
 use async_trait::async_trait;
-use sqlx::{Error, PgPool};
+use sqlx::{Error, PgConnection, PgPool};
 use uuid::{uuid, Uuid};
 use crate::domain::block::BlockInfo;
 
 #[async_trait]
 pub trait BlockRepository: Send + Sync {
-    async fn find_by_height(&self, height: i64) -> Result<BlockInfo, Error>;
-    async fn find_by_hash(&self, hash: &str) -> Result<BlockInfo, Error>;
-    async fn save(&self, user: BlockInfo) -> Result<(), Error>;
+    async fn find_by_height(&self, conn: &mut PgConnection, height: i64) -> Result<BlockInfo, Error>;
+    async fn find_by_hash(&self, conn: &mut PgConnection, hash: &str) -> Result<BlockInfo, Error>;
+    async fn save(&self, conn: &mut PgConnection, user: BlockInfo) -> Result<(), Error>;
 }
 
-pub struct PostgresBlockRepository {
-    pool: PgPool,
-}
+pub struct PostgresBlockRepository;
 
 #[async_trait]
 impl BlockRepository for PostgresBlockRepository {
-    async fn find_by_height(&self, height: i64) -> Result<BlockInfo, Error> {
+    async fn find_by_height(&self, conn: &mut PgConnection, height: i64) -> Result<BlockInfo, Error> {
         sqlx::query_as!(BlockInfo, r#"SELECT * FROM block_info WHERE height = $1"#, height)
-            .fetch_one(&self.pool)
+            .fetch_one(conn)
             .await
     }
 
-    async fn find_by_hash(&self, hash: &str) -> Result<BlockInfo, Error> {
+    async fn find_by_hash(&self, conn: &mut PgConnection, hash: &str) -> Result<BlockInfo, Error> {
         sqlx::query_as!(BlockInfo, r#"SELECT * FROM block_info WHERE hash = $1"#, hash)
-            .fetch_one(&self.pool)
+            .fetch_one(conn)
             .await
     }
-    async fn save(&self, block: BlockInfo) -> Result<(), Error> {
+    async fn save(&self, conn: &mut PgConnection, block: BlockInfo) -> Result<(), Error> {
         sqlx::query!(
             r#"INSERT INTO block_info (
                 height,
@@ -54,7 +52,7 @@ impl BlockRepository for PostgresBlockRepository {
             block.avg_feerate,
             block.difficulty
         )
-        .execute(&self.pool)
+        .execute(conn)
         .await?;
 
         Ok(())

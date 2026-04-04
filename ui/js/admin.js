@@ -36,4 +36,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    const saveBlocksBtn = document.getElementById('save-blocks-btn');
+    if (saveBlocksBtn) {
+        saveBlocksBtn.addEventListener('click', async () => {
+            const msgDiv = document.getElementById('admin-message');
+            msgDiv.textContent = 'Saving blocks to database...';
+            msgDiv.className = 'admin-message';
+            try {
+                const response = await fetch('/api/admin/save-blocks', { method: 'POST' });
+                const data = await response.json();
+                msgDiv.textContent = data.message;
+                msgDiv.className = data.status === 'success' ? 'admin-success' : 'admin-error';
+            } catch (err) {
+                msgDiv.textContent = 'Network error: ' + err.message;
+                msgDiv.className = 'admin-error';
+            }
+        });
+    }
 });

@@ -18,11 +18,13 @@ use dashmap::DashMap;
 use serde_json::json;
 use configuration::get_configuration;
 use services::bitcoin::rpc::setup_wallet;
-
+use crate::repositories::block_repository::PostgresBlockRepository;
+use crate::services::block_service::BlockService;
 
 pub struct AppState {
     pub bitcoin_clients: DashMap<String, Arc<Mutex<Client>>>,
-    pub db_pool: PgPool
+    pub db_pool: PgPool,
+    pub block_service: Arc<BlockService>,
 }
 
 impl AppState {
@@ -92,9 +94,13 @@ impl AppState {
 
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
 
+    let block_repo = Arc::new(PostgresBlockRepository);
+    let block_service = Arc::new(BlockService::new(block_repo, db_pool.clone()));
+
     let app_state = web::Data::new(AppState {
         bitcoin_clients: DashMap::new(),
         db_pool,
+        block_service
     });
 
     println!("=== Starting bitcoin client ===");

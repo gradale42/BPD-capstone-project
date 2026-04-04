@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::{RpcApi};
 use serde_json::json;
 use crate::AppState;
-use crate::services::bitcoin::rpc::{import_descriptors, setup_mining_address};
+use crate::services::bitcoin::rpc::{get_blocks_info, import_descriptors, setup_mining_address};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MineParams {
@@ -75,5 +75,34 @@ pub async fn mine_blocks_handler(state: web::Data<AppState>, query: web::Query<M
             "status": "error",
             "message": format!("Cannot connect to mining wallet: {}", e)
         })),
+    }
+}
+pub async fn save_blocks(state: web::Data<AppState>) -> impl Responder {
+    const DEFAULT_COUNT: u64 = 500;
+    let blocks = match get_blocks_info(state.clone(), Some(DEFAULT_COUNT)).await {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("RPC error: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": format!("Failed to fetch blocks: {}", e)
+            }));
+        }
+    };
+
+    match state.block_service.save_blocks_ignore_duplicates(blocks).await {
+        Ok((saved, skipped)) => {
+            HttpResponse::Ok().json(json!({
+                "status": "success",
+                "message": format!("Saved {} new blocks, skipped {} existing", saved, skipped)
+            }))
+        }
+        Err(e) => {
+            eprintln!("DB error: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": format!("Failed to save blocks: {}", e)
+            }))
+        }
     }
 }
