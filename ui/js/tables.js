@@ -1,22 +1,29 @@
 // initialization of DataTables for blocks, mempool history, and peers
 let blocksTable, mempoolTable, peersTable;
+let currentMode = 'live';
 
 $(document).ready(function() {
     initTables();
 });
 
 function initTables() {
-
-    // blocks table
     blocksTable = $('#blocks-table').DataTable({
         processing: true,
         serverSide: true,
-        ajax: {
-            url: '/api/blocks',
-            type: 'GET',
-            data: function(d) {
-                return d;
-            }
+        ajax: function(data, callback, settings) {
+            data.mode = currentMode;
+            $.ajax({
+                url: '/api/blocks',
+                type: 'GET',
+                data: data,
+                success: function(response) {
+                    callback(response);
+                },
+                error: function(xhr, error, thrown) {
+                    console.error('DataTable error:', error);
+                    callback({ draw: data.draw, data: [], recordsTotal: 0, recordsFiltered: 0 });
+                }
+            });
         },
         columns: [
             {
@@ -64,19 +71,23 @@ function initTables() {
         }
     });
 
-    function handleBlockClick(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const height = this.getAttribute('data-height');
-        const hash = this.getAttribute('data-hash');
-        console.log(`Opening block details: height=${height}, hash=${hash}`);
-        if (typeof showBlockDetails === 'function') {
-            showBlockDetails(height, hash);
-        } else {
-            console.error('showBlockDetails function not found');
-        }
-        return false;
-    }
+    $('#mode-live').on('click', function() {
+        if (currentMode === 'live') return;
+        console.log('Switching to LIVE mode');
+        currentMode = 'live';
+        $('#mode-live').addClass('active');
+        $('#mode-index').removeClass('active');
+        blocksTable.ajax.reload();
+    });
+
+    $('#mode-index').on('click', function() {
+        if (currentMode === 'index') return;
+        console.log('Switching to INDEX mode');
+        currentMode = 'index';
+        $('#mode-index').addClass('active');
+        $('#mode-live').removeClass('active');
+        blocksTable.ajax.reload();
+    });
 
     // mempool history table
     mempoolTable = $('#mempool-table').DataTable({
@@ -144,5 +155,19 @@ function initTables() {
         peersTable.ajax.reload(null, false);
     }, 10000);
 
-    console.log('Tables.js loaded');
+    console.log('Tables.js loaded, currentMode =', currentMode);
+}
+
+function handleBlockClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const height = this.getAttribute('data-height');
+    const hash = this.getAttribute('data-hash');
+    console.log(`Opening block details: height=${height}, hash=${hash}`);
+    if (typeof showBlockDetails === 'function') {
+        showBlockDetails(height, hash);
+    } else {
+        console.error('showBlockDetails function not found');
+    }
+    return false;
 }

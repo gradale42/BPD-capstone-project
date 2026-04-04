@@ -48,4 +48,18 @@ impl BlockService {
             })
             .await
     }
+
+    pub async fn get_blocks_from_db(&self, limit: i64, offset: i64, order_by: &str) -> Result<Vec<BlockInfo>, Error> {
+        let mut conn = self.pool.acquire().await?;
+        println!("Loading {} blocks from database (offset: {})", limit, offset);
+        let blocks = self.repo.list_blocks(&mut conn, limit, offset, order_by).await?;
+        println!("Loaded {} blocks from database", blocks.len());
+        Ok(blocks)
+    }
+
+    pub async fn count_blocks_in_db(&self) -> Result<i64, Error> {
+        let mut conn = self.pool.acquire().await?;
+        let count = self.repo.count_blocks(&mut conn).await?;
+        Ok(count)
+    }
 }

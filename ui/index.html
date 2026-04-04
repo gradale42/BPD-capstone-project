@@ -123,6 +123,13 @@
         <!-- Blocks Tab -->
         <div class="tab-pane" id="tab-blocks">
             <h2><i class="fas fa-cubes"></i> Block History</h2>
+
+            <div class="mode-switch">
+                <span>Data source:</span>
+                <button id="mode-live" class="mode-btn active">Live (RPC)</button>
+                <button id="mode-index" class="mode-btn">Index (DB)</button>
+            </div>
+
             <table id="blocks-table" class="display responsive nowrap" style="width:100%">
                 <thead>
                 <tr>

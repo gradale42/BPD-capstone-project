@@ -1,13 +1,17 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct BlocksParams {
     pub draw: i32,
     pub start: Option<i32>,
     pub length: Option<i32>,
+    pub order: Option<Vec<Order>>,
+    pub mode: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct BlockInfo {
     pub height: i64,
     pub hash: String,
@@ -21,4 +25,10 @@ pub struct BlockInfo {
     pub avg_feerate: f64, // Usually sat/vB, so float is fine here
     pub difficulty: f64,
     pub indexed_at: Option<DateTime<Utc>>,    // Unix timestamp when indexed
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Order {
+    pub column: usize,
+    pub dir: String,
 }

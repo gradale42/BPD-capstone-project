@@ -663,3 +663,26 @@ table {
 .jsonviewer .json-null {
     color: #999;
 }
+
+.mode-switch {
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.mode-btn {
+    padding: 5px 15px;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.mode-btn.active {
+    background: #f7931a;
+    color: white;
+    border-color: #f7931a;
+}
+.mode-btn:hover:not(.active) {
+    background: #e9ecef;
+}
