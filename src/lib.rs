@@ -5,6 +5,7 @@ pub mod configuration;
 pub mod api;
 pub mod services;
 pub mod repositories;
+pub mod db;
 
 use actix_files as actix_fs;
 use std::net::TcpListener;

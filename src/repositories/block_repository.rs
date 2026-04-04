@@ -7,7 +7,7 @@ use crate::domain::block::BlockInfo;
 pub trait BlockRepository: Send + Sync {
     async fn find_by_height(&self, height: i64) -> Result<BlockInfo, Error>;
     async fn find_by_hash(&self, hash: &str) -> Result<BlockInfo, Error>;
-    async fn create(&self, user: BlockInfo) -> Result<(), Error>;
+    async fn save(&self, user: BlockInfo) -> Result<(), Error>;
 }
 
 pub struct PostgresBlockRepository {
@@ -27,7 +27,7 @@ impl BlockRepository for PostgresBlockRepository {
             .fetch_one(&self.pool)
             .await
     }
-    async fn create(&self, block: BlockInfo) -> Result<(), Error> {
+    async fn save(&self, block: BlockInfo) -> Result<(), Error> {
         sqlx::query!(
             r#"INSERT INTO block_info (
                 height,
