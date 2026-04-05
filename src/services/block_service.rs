@@ -62,4 +62,12 @@ impl BlockService {
         let count = self.repo.count_blocks(&mut conn).await?;
         Ok(count)
     }
+
+    pub async fn get_last_block_height(&self) -> Result<Option<i64>, sqlx::Error> {
+        let mut conn = self.pool.acquire().await?;
+        let row = sqlx::query!("SELECT height FROM block_info ORDER BY height DESC LIMIT 1")
+            .fetch_optional(&mut conn)
+            .await?;
+        Ok(row.map(|r| r.height))
+    }
 }

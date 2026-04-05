@@ -5,6 +5,9 @@ pub mod mempool;
 pub mod peers;
 pub mod admin;
 pub mod wallets;
+pub mod scheduler;
+pub mod indexer;
+pub mod live;
 
 use actix_web::web;
 
@@ -27,6 +30,8 @@ pub fn config_real(
 ) {
     cfg.service(
         web::scope("/api")
+            .route("/live", web::get().to(live::get_live_stats))
+            .route("/indexer", web::get().to(indexer::get_indexer_stats))
             .route("/stats", web::get().to(stats::get_stats))
             .route("/blocks", web::get().to(blocks::get_blocks))
             .route("/mempool", web::get().to(mempool::get_mempool))
@@ -37,7 +42,12 @@ pub fn config_real(
             .route("/wallets", web::get().to(wallets::list_wallets))
             .route("/wallets/{wallet_name}", web::get().to(wallets::get_wallet_details_handler))
             .route("/wallets/{wallet_name}/descriptors", web::get().to(wallets::get_descriptors_handler))
-            .route("/block/{block_hash}", web::get().to(block::get_block_by_hash)),
+            .route("/block/{block_hash}", web::get().to(block::get_block_by_hash))
+            .route("/scheduler/start", web::post().to(scheduler::start_scheduler))
+            .route("/scheduler/stop", web::post().to(scheduler::stop_scheduler))
+            .route("/scheduler/status", web::get().to(scheduler::get_scheduler_status))
+            .route("/scheduler/logs", web::get().to(scheduler::get_scheduler_logs))
+            .route("/scheduler/log/{id}", web::get().to(scheduler::get_scheduler_log)),
     );
 }
 

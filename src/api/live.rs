@@ -1,7 +1,16 @@
-use crate::api::read_json_file;
-use actix_web::HttpResponse;
+use actix_web::{web, HttpResponse, Responder};
+use serde_json::json;
+use crate::AppState;
+use crate::services::bitcoin::rpc::{get_mempool_tx_count, get_peer_count, get_network_hashrate};
 
-pub async fn get_live() -> HttpResponse {
-    println!("📡 Handling /api/live request");
-    read_json_file("live.json").await
+pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
+    let mempool_count = get_mempool_tx_count(&state).await.unwrap_or(0);
+    let peer_count = get_peer_count(&state).await.unwrap_or(0);
+    let hashrate = get_network_hashrate(&state).await.unwrap_or(0.0);
+
+    HttpResponse::Ok().json(json!({
+        "mempool_count": mempool_count,
+        "peer_count": peer_count,
+        "hashrate": hashrate,
+    }))
 }

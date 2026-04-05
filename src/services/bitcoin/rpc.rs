@@ -214,6 +214,45 @@ pub async fn get_blocks_info(
     }
 }
 
+pub async fn get_last_block_height(state: &web::Data<AppState>) -> Result<i64, String> {
+    match state.get_default_bitcoin_client().lock() {
+        Ok(client) => {
+            let info = client.get_blockchain_info().map_err(|e| e.to_string())?;
+            Ok(info.blocks as i64)
+        }
+        Err(e) => Err(format!("Failed to lock RPC client: {}", e)),
+    }
+}
+
+pub async fn get_mempool_tx_count(state: &web::Data<AppState>) -> Result<usize, String> {
+    match state.get_default_bitcoin_client().lock() {
+        Ok(client) => {
+            let txids = client.get_raw_mempool().map_err(|e| e.to_string())?;
+            Ok(txids.len())
+        }
+        Err(e) => Err(format!("Failed to lock RPC client: {}", e)),
+    }
+}
+
+pub async fn get_peer_count(state: &web::Data<AppState>) -> Result<usize, String> {
+    match state.get_default_bitcoin_client().lock() {
+        Ok(client) => {
+            let peers = client.get_peer_info().map_err(|e| e.to_string())?;
+            Ok(peers.len())
+        }
+        Err(e) => Err(format!("Failed to lock RPC client: {}", e)),
+    }
+}
+
+pub async fn get_network_hashrate(state: &web::Data<AppState>) -> Result<f64, String> {
+    match state.get_default_bitcoin_client().lock() {
+        Ok(client) => {
+            let hashrate = client.get_network_hash_ps(None, None).map_err(|e| e.to_string())?;
+            Ok(hashrate as f64 / 1e18) // EH/s
+        }
+        Err(e) => Err(format!("Failed to lock RPC client: {}", e)),
+    }
+}
 
 
 

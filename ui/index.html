@@ -53,7 +53,7 @@
     <!-- Live Statistics Tiles (always visible) -->
     <div class="tiles">
         <!-- Last Block Tile -->
-        <div class="tile">
+        <div class="tile" id="last-block-tile">
             <div class="tile-icon"><i class="fas fa-cubes"></i></div>
             <div class="tile-content">
                 <div class="tile-label">Last block</div>
@@ -96,6 +96,7 @@
         <button class="tab-button" data-tab="mempool">🔄 Mempool</button>
         <button class="tab-button" data-tab="peers">🌐 P2P Peers</button>
         <button class="tab-button" data-tab="wallets">💰 Wallets</button>
+        <button class="tab-button" data-tab="scheduler">⏰ Scheduler</button>
         <button class="tab-button" data-tab="admin">🛠️ Admin</button>
     </div>
 
@@ -295,6 +296,48 @@
     </div>
 </div>
 
+<!-- Scheduler Tab -->
+<div class="tab-pane" id="tab-scheduler">
+    <h2><i class="fas fa-clock"></i> Scheduler</h2>
+
+    <div class="scheduler-controls">
+        <div class="status-indicator">
+            Status: <span id="scheduler-status" class="status-badge stopped">Stopped</span>
+        </div>
+        <div class="control-buttons">
+            <button id="start-scheduler-btn" class="admin-btn">▶ Start</button>
+            <button id="stop-scheduler-btn" class="admin-btn" disabled>⏸ Stop</button>
+        </div>
+        <div class="scheduler-config">
+            <label>
+                Interval (minutes):
+                <input type="number" id="scheduler-interval" value="1" min="1" max="60">
+            </label>
+            <label>
+                Blocks per sync:
+                <input type="number" id="scheduler-blocks-count" value="100" min="1" max="1000">
+            </label>
+        </div>
+    </div>
+
+    <h3>Synchronization Logs</h3>
+    <table id="scheduler-logs-table" class="display responsive nowrap" style="width:100%">
+        <thead>
+        <tr>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Description</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+    </table>
+
+    <div class="log-details">
+        <h4>Result Details:</h4>
+        <pre id="log-result-details" class="log-result-content">Select a log row to view details</pre>
+    </div>
+</div>
+
 <!-- Custom JavaScript Files -->
 <script src="/ui/js/main.js"></script>
 <script src="/ui/js/charts.js"></script>
@@ -302,6 +345,7 @@
 <script src="/ui/js/tables.js"></script>
 <script src="/ui/js/admin.js"></script>
 <script src="/ui/js/wallets.js"></script>
+<script src="/ui/js/scheduler.js"></script>
 
 </body>
 </html>
