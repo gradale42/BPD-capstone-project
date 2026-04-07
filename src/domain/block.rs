@@ -32,3 +32,17 @@ pub struct Order {
     pub column: usize,
     pub dir: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct TimeRange {
+    pub from: i64,  // Unix timestamp (seconds)
+    pub to: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TimeseriesPoint {
+    pub time: i64,           // Unix timestamp (seconds)
+    pub tx_count: i32,
+    pub avg_fee_sat: i64,
+    pub avg_feerate: f64,
+}

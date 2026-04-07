@@ -758,3 +758,157 @@ table {
     max-height: 300px;
     overflow-y: auto;
 }
+
+.network-charts-section {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.network-charts-section h2 {
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    color: #333;
+}
+.blockchain-analytics {
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.metric-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.metric-btn {
+    background: #2a2a3a;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: #ccc;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.metric-btn.active {
+    background: #f7931a;
+}
+
+.blockchain-chart-container {
+    width: 100%;
+    height: 500px;
+}
+
+.blockchain-status {
+    margin: 15px 0;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+.blockchain-status .status-led {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3fb950;
+    box-shadow: 0 0 6px #3fb950;
+}
+
+.date-range-container {
+    background: #21262d;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    transition: all 0.2s;
+}
+
+.date-range-container:hover {
+    border-color: #f7931a;
+}
+
+#blockchain-daterange {
+    background: transparent;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #e6edf3;
+}
+
+#blockchain-daterange i {
+    color: #f7931a;
+    font-size: 14px;
+}
+
+#blockchain-daterange span {
+    font-family: 'SF Mono', monospace;
+    font-size: 13px;
+}
+
+.daterangepicker {
+    border-color: #f7931a !important;
+}
+.daterangepicker .ranges li.active,
+.daterangepicker td.active,
+.daterangepicker td.active:hover {
+    background: #f7931a !important;
+    color: #0d1117 !important;
+}
+.daterangepicker .calendar-table th,
+.daterangepicker .calendar-table td {
+    color: #e6edf3;
+}
+.daterangepicker .calendar-table {
+    background: #161b22;
+    border-color: #30363d;
+}
+.daterangepicker td.off,
+.daterangepicker td.off.in-range,
+.daterangepicker td.off.start-date,
+.daterangepicker td.off.end-date {
+    background: #21262d;
+    color: #8b949e;
+}
+.daterangepicker .drp-buttons .btn {
+    background: #f7931a;
+    color: #0d1117;
+    border: none;
+}
+.daterangepicker .drp-buttons .btn:hover {
+    background: #e07c1c;
+}
+
+#blockchain-daterange {
+    background: #ffffff !important;
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+
+#blockchain-daterange span {
+    color: #212529 !important;
+}
+
+#blockchain-daterange i {
+    color: #f7931a !important;
+}
+
+#blockchain-data-points {
+    font-family: monospace;
+    font-size: 12px;
+    color: #8b949e;
+}
+
+body.dark .network-charts-section h2 {
+    color: #e6edf3;
+}
+body.dark .network-charts-section {
+    border-top-color: #30363d;
+}

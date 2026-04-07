@@ -1,5 +1,5 @@
 use crate::db::Transactional;
-use crate::domain::block::BlockInfo;
+use crate::domain::block::{BlockInfo, TimeseriesPoint};
 use crate::repositories::block_repository::{BlockRepository, PostgresBlockRepository};
 use sqlx::{Error, PgPool};
 use std::sync::Arc;
@@ -69,5 +69,10 @@ impl BlockService {
             .fetch_optional(&mut conn)
             .await?;
         Ok(row.map(|r| r.height))
+    }
+
+    pub async fn get_timeseries(&self, from: i64, to: i64) -> Result<Vec<TimeseriesPoint>, Error> {
+        let mut conn = self.pool.acquire().await?;
+        self.repo.get_timeseries(&mut conn, from, to).await
     }
 }

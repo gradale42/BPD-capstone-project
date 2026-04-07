@@ -38,6 +38,13 @@
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/ui/css/style.css">
 
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <!-- Moment & DateRangePicker -->
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
 </head>
 <body>
 <div class="container">
@@ -102,21 +109,56 @@
 
     <!-- Tab Content Container -->
     <div class="tabs-content">
+
         <!-- Charts Tab -->
         <div class="tab-pane active" id="tab-charts">
-            <h2><i class="fas fa-chart-line"></i> Network Charts</h2>
-            <div class="charts-row">
-                <!-- Fee Rate Chart Container -->
-                <div class="chart-container">
-                    <canvas id="feeRateChart"></canvas>
+
+            <!-- Blockchain Analytics Section -->
+            <div class="blockchain-analytics">
+                <div class="analytics-header">
+                    <h3><i class="fas fa-chart-line"></i> Blockchain Metrics</h3>
+                    <div class="date-range-container" id="blockchain-daterange-container">
+                        <div id="blockchain-daterange">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
                 </div>
-                <!-- Mempool Statistics Chart Container -->
-                <div class="chart-container">
-                    <canvas id="mempoolChart"></canvas>
+                <div class="metric-buttons">
+                    <button class="metric-btn active" data-metric="tx_count">Transactions</button>
+                    <button class="metric-btn" data-metric="avg_fee_sat">Avg Fee (sat)</button>
+                    <button class="metric-btn" data-metric="avg_feerate">Fee Rate (sat/vB)</button>
                 </div>
-                <!-- Bandwidth Usage Chart Container -->
-                <div class="chart-container">
-                    <canvas id="bandwidthChart"></canvas>
+
+                <!-- Status Bar for Blockchain Data -->
+                <div class="status-bar blockchain-status">
+                    <div class="status-indicator">
+                        <div class="status-led"></div>
+                        <span id="blockchain-status-text">Connected</span>
+                    </div>
+                    <div id="blockchain-data-points">—</div>
+                </div>
+
+                <div id="blockchain-chart" class="blockchain-chart-container"></div>
+            </div>
+
+            <!-- Network Charts Section -->
+            <div class="network-charts-section">
+                <h2><i class="fas fa-chart-line"></i> Network Charts</h2>
+                <div class="charts-row">
+                    <!-- Fee Rate Chart Container -->
+                    <div class="chart-container">
+                        <canvas id="feeRateChart"></canvas>
+                    </div>
+                    <!-- Mempool Statistics Chart Container -->
+                    <div class="chart-container">
+                        <canvas id="mempoolChart"></canvas>
+                    </div>
+                    <!-- Bandwidth Usage Chart Container -->
+                    <div class="chart-container">
+                        <canvas id="bandwidthChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -346,6 +388,8 @@
 <script src="/ui/js/admin.js"></script>
 <script src="/ui/js/wallets.js"></script>
 <script src="/ui/js/scheduler.js"></script>
+<script src="/ui/js/date-range-peeker.js"></script>
+<script src="/ui/js/blockchain-charts.js"></script>
 
 </body>
 </html>

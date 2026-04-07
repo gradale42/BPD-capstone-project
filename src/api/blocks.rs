@@ -1,4 +1,4 @@
-use crate::domain::block::{BlockInfo, BlocksParams};
+use crate::domain::block::{BlockInfo, BlocksParams, TimeRange};
 use crate::services::bitcoin::rpc::get_blocks_info;
 use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
@@ -100,6 +100,21 @@ pub async fn get_blocks(
                     }))
                 }
             }
+        }
+    }
+}
+
+pub async fn get_block_timeseries(
+    state: web::Data<AppState>,
+    query: web::Query<TimeRange>,
+) -> impl Responder {
+    match state.block_service.get_timeseries(query.from, query.to).await {
+        Ok(points) => HttpResponse::Ok().json(points),
+        Err(e) => {
+            eprintln!("Timeseries error: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": format!("Failed to fetch timeseries: {}", e)
+            }))
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::domain::block::BlockInfo;
+use crate::domain::block::{BlockInfo, TimeseriesPoint};
 use async_trait::async_trait;
 use sqlx::{Error, PgConnection, PgPool};
 use uuid::{uuid, Uuid};
@@ -14,6 +14,12 @@ pub trait BlockRepository: Send + Sync {
         &self, conn: &mut PgConnection, limit: i64, offset: i64, order_by: &str,
     ) -> Result<Vec<BlockInfo>, Error>;
     async fn count_blocks(&self, conn: &mut PgConnection) -> Result<i64, Error>;
+    async fn get_timeseries(
+        &self,
+        conn: &mut PgConnection,
+        from: i64,
+        to: i64,
+    ) -> Result<Vec<TimeseriesPoint>, Error>;
 }
 
 pub struct PostgresBlockRepository;
@@ -99,5 +105,26 @@ impl BlockRepository for PostgresBlockRepository {
     async fn count_blocks(&self, conn: &mut PgConnection) -> Result<i64, Error> {
         let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM block_info").fetch_one(conn).await?;
         Ok(row.0)
+    }
+
+    async fn get_timeseries(
+        &self,
+        conn: &mut PgConnection,
+        from: i64,
+        to: i64,
+    ) -> Result<Vec<TimeseriesPoint>, Error> {
+        sqlx::query_as!(
+            TimeseriesPoint,
+            r#"
+            SELECT time, tx_count, avg_fee_sat, avg_feerate
+            FROM block_info
+            WHERE time BETWEEN $1 AND $2
+            ORDER BY time ASC
+            "#,
+            from,
+            to
+        )
+            .fetch_all(conn)
+            .await
     }
 }
