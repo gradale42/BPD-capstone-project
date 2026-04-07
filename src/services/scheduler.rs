@@ -2,32 +2,29 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time;
-use sqlx::PgPool;
+use sqlx::{Error, PgConnection, PgPool};
+use uuid::Uuid;
 use crate::domain::block::BlockInfo;
-use crate::domain::scheduler_log::SyncResult;
+use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
 use crate::repositories::block_repository::BlockRepository;
 use crate::repositories::scheduler_log_repository::SchedulerLogRepository;
 use crate::services::bitcoin::rpc::get_blocks_info;
 use crate::AppState;
+use crate::db::Transactional;
 
+#[derive()]
 pub struct SchedulerService {
-    db_pool: PgPool,
-    block_repo: Arc<dyn BlockRepository + Send + Sync>,
-    log_repo: Arc<dyn SchedulerLogRepository + Send + Sync>,
+    state: Arc<Mutex<AppState>>,
     is_running: Arc<Mutex<bool>>,
     task_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 impl SchedulerService {
     pub fn new(
-        db_pool: PgPool,
-        block_repo: Arc<dyn BlockRepository + Send + Sync>,
-        log_repo: Arc<dyn SchedulerLogRepository + Send + Sync>,
+        state: AppState,
     ) -> Self {
         Self {
-            db_pool,
-            block_repo,
-            log_repo,
+            state: Arc::new(Mutex::new(state)),
             is_running: Arc::new(Mutex::new(false)),
             task_handle: Arc::new(Mutex::new(None)),
         }
@@ -43,9 +40,7 @@ impl SchedulerService {
         drop(is_running);
 
         let is_running_clone = self.is_running.clone();
-        let db_pool = self.db_pool.clone();
-        let block_repo = self.block_repo.clone();
-        let log_repo = self.log_repo.clone();
+        let state = self.state.clone();
 
         let handle = tokio::spawn(async move {
             let mut interval = time::interval(Duration::from_secs(interval_minutes * 60));
@@ -83,12 +78,10 @@ impl SchedulerService {
     }
 
     async fn run_sync(
-        db_pool: PgPool,
-        block_repo: Arc<dyn BlockRepository + Send + Sync>,
-        log_repo: Arc<dyn SchedulerLogRepository + Send + Sync>,
+        state: AppState,
         blocks_count: u64,
     ) {
-        let mut conn = match db_pool.acquire().await {
+        let mut conn = match state.db_pool.acquire().await {
             Ok(conn) => conn,
             Err(e) => {
                 eprintln!("Failed to acquire DB connection: {}", e);
@@ -96,7 +89,7 @@ impl SchedulerService {
             }
         };
 
-        let log_id = match log_repo.create_log(&mut conn, "On-chain blocks synchronization").await {
+        let log_id = match state.scheduler_log_service.create_log("On-chain blocks synchronization").await {
             Ok(id) => id,
             Err(e) => {
                 eprintln!("Failed to create log: {}", e);
@@ -112,27 +105,18 @@ impl SchedulerService {
             error: None,
         };
 
-        // Загружаем состояние AppState (нужно передать bitcoin_clients)
-        // Это временное решение, нужно будет передать клиент
-        // TODO: Получить bitcoin client из глобального состояния
-
-        // Пока используем заглушку
         println!("Fetching {} blocks from RPC...", blocks_count);
 
-        // Здесь должен быть вызов get_blocks_info с реальным клиентом
-        // let blocks = match get_blocks_info(app_state, Some(blocks_count)).await {
-        //     Ok(blocks) => blocks,
-        //     Err(e) => {
-        //         result.error = Some(e.to_string());
-        //         let _ = log_repo.update_log_failure(&mut conn, log_id, &e.to_string()).await;
-        //         return;
-        //     }
-        // };
+        let blocks = match get_blocks_info(state, Some(blocks_count)).await {
+            Ok(blocks) => blocks,
+            Err(e) => {
+                result.error = Some(e.to_string());
+                let _ = state.scheduler_log_service.update_log_failure(log_id, &e.to_string()).await;
+                return;
+            }
+        };
 
-        // Временная заглушка
-        let blocks: Vec<BlockInfo> = vec![];
 
-        // Сохраняем блоки
         for block in blocks {
             match block_repo.find_by_height(&mut conn, block.height).await {
                 Ok(_) => {
@@ -143,7 +127,7 @@ impl SchedulerService {
                     if let Err(e) = block_repo.save(&mut conn, block.clone()).await {
                         eprintln!("Failed to save block {}: {}", block.height, e);
                         result.error = Some(e.to_string());
-                        let _ = log_repo.update_log_failure(&mut conn, log_id, &e.to_string()).await;
+                        let _ = state.scheduler_log_service.update_log_failure(log_id, &e.to_string()).await;
                         return;
                     }
                     result.saved += 1;
@@ -151,15 +135,14 @@ impl SchedulerService {
                 }
                 Err(e) => {
                     result.error = Some(e.to_string());
-                    let _ = log_repo.update_log_failure(&mut conn, log_id, &e.to_string()).await;
+                    let _ = state.scheduler_log_service.update_log_failure(log_id, &e.to_string()).await;
                     return;
                 }
             }
         }
 
-        // Обновляем лог с результатом
         if result.error.is_none() {
-            if let Err(e) = log_repo.update_log_success(&mut conn, log_id, &result).await {
+            if let Err(e) = state.scheduler_log_service.update_log_success(log_id, &result).await {
                 eprintln!("Failed to update log: {}", e);
             } else {
                 println!("Sync completed: saved {}, skipped {}", result.saved, result.skipped);

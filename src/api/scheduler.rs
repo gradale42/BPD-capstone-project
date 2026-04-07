@@ -67,16 +67,7 @@ pub async fn get_scheduler_logs(
     let length = params.length.unwrap_or(25) as i64;
     let start = params.start.unwrap_or(0) as i64;
 
-    let mut conn = match state.db_pool.acquire().await {
-        Ok(conn) => conn,
-        Err(e) => {
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
-    };
-
-    let total = match state.scheduler_log_repo.count_logs(&mut conn).await {
+    let total = match state.scheduler.count_logs().await {
         Ok(count) => count as usize,
         Err(e) => {
             eprintln!("Failed to count logs: {}", e);
@@ -86,7 +77,7 @@ pub async fn get_scheduler_logs(
         }
     };
 
-    let logs = match state.scheduler_log_repo.list_logs(&mut conn, length, start).await {
+    let logs = match state.scheduler.list_logs(length, start).await {
         Ok(logs) => logs,
         Err(e) => {
             eprintln!("Failed to list logs: {}", e);
@@ -111,16 +102,8 @@ pub async fn get_scheduler_log(
     path: web::Path<Uuid>,
 ) -> impl Responder {
     let id = path.into_inner();
-    let mut conn = match state.db_pool.acquire().await {
-        Ok(conn) => conn,
-        Err(e) => {
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
-    };
 
-    match state.scheduler_log_repo.get_log(&mut conn, id).await {
+    match state.scheduler.get_log(id).await {
         Ok(log) => HttpResponse::Ok().json(log),
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().json(json!({
             "error": "Log not found"

@@ -19,7 +19,7 @@ use serde_json::json;
 use configuration::get_configuration;
 use services::bitcoin::rpc::setup_wallet;
 use crate::services::block_service::BlockService;
-use crate::services::scheduler::SchedulerService;
+use crate::services::scheduler_log_service::SchedulerLogService;
 use crate::repositories::{
     BlockRepository, PostgresBlockRepository,
     SchedulerLogRepository, PostgresSchedulerLogRepository,
@@ -30,8 +30,7 @@ pub struct AppState {
     pub bitcoin_clients: DashMap<String, Arc<Mutex<Client>>>,
     pub db_pool: PgPool,
     pub block_service: Arc<BlockService>,
-    pub scheduler: Arc<SchedulerService>,
-    pub scheduler_log_repo: Arc<dyn SchedulerLogRepository + Send + Sync>,
+    pub scheduler_log_service: Arc<SchedulerLogService>,
 }
 
 impl AppState {
@@ -101,11 +100,13 @@ impl AppState {
 
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
 
+    // repo layer
     let block_repo = Arc::new(PostgresBlockRepository);
-    let block_service = Arc::new(BlockService::new(block_repo.clone(), db_pool.clone()));
-
     let scheduler_log_repo = Arc::new(PostgresSchedulerLogRepository);
-    let scheduler = Arc::new(SchedulerService::new(
+
+    // service layer
+    let block_service = Arc::new(BlockService::new(block_repo.clone(), db_pool.clone()));
+    let scheduler_log_service = Arc::new(SchedulerLogService::new(
         db_pool.clone(),
         block_repo.clone(),
         scheduler_log_repo.clone(),
@@ -115,8 +116,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         bitcoin_clients: DashMap::new(),
         db_pool,
         block_service,
-        scheduler,
-        scheduler_log_repo,
+        scheduler_log_service,
     });
 
     println!("=== Starting bitcoin client ===");
