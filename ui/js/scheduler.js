@@ -52,48 +52,40 @@ function initSchedulerTab() {
         }
     });
 
-    // Кнопки управления
-    $('#start-scheduler-btn').click(async function() {
+    $('#scheduler-toggle-btn').click(async function() {
+        const btn = $(this);
+        const isRunning = btn.find('span').text().includes('Stop');
+        const action = isRunning ? 'stop' : 'start';
+
         const interval = $('#scheduler-interval').val();
         const blocksCount = $('#scheduler-blocks-count').val();
 
+        const url = action === 'start'
+            ? `/api/scheduler/start?interval_minutes=${interval}&blocks_count=${blocksCount}`
+            : '/api/scheduler/stop';
+
+        btn.prop('disabled', true);
         try {
-            const response = await fetch(`/api/scheduler/start?interval_minutes=${interval}&blocks_count=${blocksCount}`, {
-                method: 'POST'
-            });
+            const response = await fetch(url, { method: 'POST' });
             const data = await response.json();
 
             if (data.status === 'success') {
-                showMessage('Scheduler started', 'success');
+                showMessage(`Scheduler ${action}ed`, 'success');
                 updateSchedulerStatus();
             } else {
                 showMessage('Error: ' + data.message, 'error');
             }
         } catch (err) {
             showMessage('Network error: ' + err.message, 'error');
-        }
-    });
-
-    $('#stop-scheduler-btn').click(async function() {
-        try {
-            const response = await fetch('/api/scheduler/stop', { method: 'POST' });
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                showMessage('Scheduler stopped', 'success');
-                updateSchedulerStatus();
-            } else {
-                showMessage('Error: ' + data.message, 'error');
-            }
-        } catch (err) {
-            showMessage('Network error: ' + err.message, 'error');
+        } finally {
+            btn.prop('disabled', false);
         }
     });
 
     // Refresh scheduler status on load
     updateSchedulerStatus();
 
-    // PeRiodically refresh logs and status
+    // Periodically refresh logs and status
     setInterval(() => {
         updateSchedulerStatus();
         schedulerLogsTable.ajax.reload(null, false);
@@ -104,18 +96,44 @@ async function updateSchedulerStatus() {
     try {
         const response = await fetch('/api/scheduler/status');
         const data = await response.json();
+        const isRunning = data.running;
 
-        if (data.running) {
-            $('#scheduler-status').text('Running').removeClass('stopped').addClass('running');
-            $('#start-scheduler-btn').prop('disabled', true);
-            $('#stop-scheduler-btn').prop('disabled', false);
-        } else {
-            $('#scheduler-status').text('Stopped').removeClass('running').addClass('stopped');
-            $('#start-scheduler-btn').prop('disabled', false);
-            $('#stop-scheduler-btn').prop('disabled', true);
-        }
+        const buttons = ['#scheduler-toggle-btn', '#admin-scheduler-toggle-btn'];
+        const pills = ['#scheduler-status-pill', '#admin-scheduler-status-pill'];
+
+        buttons.forEach(selector => {
+            const btn = $(selector);
+            if (!btn.length) return;
+
+            const btnText = btn.find('span');
+            const btnIcon = btn.find('i');
+
+            if (isRunning) {
+                btnText.text('Stop Scheduler');
+                btnIcon.attr('class', 'fas fa-stop');
+                btn.addClass('btn-danger-mode');
+            } else {
+                btnText.text('Start Scheduler');
+                btnIcon.attr('class', 'fas fa-play');
+                btn.removeClass('btn-danger-mode');
+            }
+        });
+
+        pills.forEach(selector => {
+            const pill = $(selector);
+            if (!pill.length) return;
+
+            if (isRunning) {
+                pill.removeClass('status-stopped').addClass('status-started');
+                pill.find('.status-text').text('Started');
+            } else {
+                pill.removeClass('status-started').addClass('status-stopped');
+                pill.find('.status-text').text('Stopped');
+            }
+        });
+
     } catch (err) {
-        console.error('Error updating scheduler status:', err);
+        console.error('Error updating status:', err);
     }
 }
 
@@ -148,6 +166,10 @@ function showMessage(message, type) {
         msgDiv.addClass(type === 'success' ? 'admin-success' : 'admin-error');
         setTimeout(() => msgDiv.text(''), 3000);
     } else {
-        alert(message);
+        console.log(`${type.toUpperCase()}: ${message}`);
     }
 }
+
+$(document).on('click', '#admin-scheduler-toggle-btn', function() {
+    $('#scheduler-toggle-btn').click(); //Delegate to main toggle button for consistent behavior
+});

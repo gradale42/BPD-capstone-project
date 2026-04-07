@@ -55,3 +55,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function updateIndexerProgress(percent, label = "Syncing blocks...") {
+    const container = $('#indexer-progress-container');
+    const fill = $('#indexer-progress-fill');
+    const labelEl = $('#progress-label');
+    const percentEl = $('#progress-percent');
+
+    container.show();
+    fill.css('width', percent + '%');
+    percentEl.text(percent + '%');
+    labelEl.text(label);
+
+    if (percent >= 100) {
+        labelEl.text("Sync Complete!");
+        setTimeout(() => {
+            container.fadeOut();
+            fill.css('width', '0%');
+        }, 3000);
+    }
+}
+
+$('#save-blocks-btn').click(async function() {
+    try {
+        const response = await fetch('/api/admin/save-blocks', { method: 'POST' });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+
+            startProgressPolling();
+        }
+    } catch (err) {
+        console.error('Failed to start indexing:', err);
+    }
+});
+
+function startProgressPolling() {
+    const interval = setInterval(async () => {
+        try {
+            const res = await fetch('/api/admin/save-progress'); // Ваш эндпоинт со статусом
+            const data = await res.json();
+
+            updateIndexerProgress(data.percent, data.message);
+
+            if (data.percent >= 100 || data.status === 'error') {
+                clearInterval(interval);
+            }
+        } catch (e) {
+            clearInterval(interval);
+        }
+    }, 1000);
+}

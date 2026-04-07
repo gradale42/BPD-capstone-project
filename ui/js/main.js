@@ -38,6 +38,19 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.error('Pane not found for tab:', tabId);
             }
+
+            if (tabId === 'charts' && typeof blockchainChart !== 'undefined' && blockchainChart) {
+                // Small delay to ensure the chart container is visible and has dimensions before resizing
+                setTimeout(() => {
+                    blockchainChart.resize();
+                }, 100);
+            }
+
+            // Adjust DataTables columns when switching to tables tab
+            if ($.fn.dataTable) {
+                $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+            }
+
         });
     });
 

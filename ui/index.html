@@ -98,73 +98,20 @@
 
     <!-- Navigation Tabs -->
     <div class="tabs-nav">
-        <button class="tab-button active" data-tab="charts">📊 Charts</button>
-        <button class="tab-button" data-tab="blocks">📦 Blocks</button>
+        <button class="tab-button active " data-tab="blocks">📦 Blocks</button>
         <button class="tab-button" data-tab="mempool">🔄 Mempool</button>
         <button class="tab-button" data-tab="peers">🌐 P2P Peers</button>
         <button class="tab-button" data-tab="wallets">💰 Wallets</button>
         <button class="tab-button" data-tab="scheduler">⏰ Scheduler</button>
         <button class="tab-button" data-tab="admin">🛠️ Admin</button>
+        <button class="tab-button" data-tab="charts">📊 Charts</button>
     </div>
 
     <!-- Tab Content Container -->
     <div class="tabs-content">
 
-        <!-- Charts Tab -->
-        <div class="tab-pane active" id="tab-charts">
-
-            <!-- Blockchain Analytics Section -->
-            <div class="blockchain-analytics">
-                <div class="analytics-header">
-                    <h3><i class="fas fa-chart-line"></i> Blockchain Metrics</h3>
-                    <div class="date-range-container" id="blockchain-daterange-container">
-                        <div id="blockchain-daterange">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span></span>
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="metric-buttons">
-                    <button class="metric-btn active" data-metric="tx_count">Transactions</button>
-                    <button class="metric-btn" data-metric="avg_fee_sat">Avg Fee (sat)</button>
-                    <button class="metric-btn" data-metric="avg_feerate">Fee Rate (sat/vB)</button>
-                </div>
-
-                <!-- Status Bar for Blockchain Data -->
-                <div class="status-bar blockchain-status">
-                    <div class="status-indicator">
-                        <div class="status-led"></div>
-                        <span id="blockchain-status-text">Connected</span>
-                    </div>
-                    <div id="blockchain-data-points">—</div>
-                </div>
-
-                <div id="blockchain-chart" class="blockchain-chart-container"></div>
-            </div>
-
-            <!-- Network Charts Section -->
-            <div class="network-charts-section">
-                <h2><i class="fas fa-chart-line"></i> Network Charts</h2>
-                <div class="charts-row">
-                    <!-- Fee Rate Chart Container -->
-                    <div class="chart-container">
-                        <canvas id="feeRateChart"></canvas>
-                    </div>
-                    <!-- Mempool Statistics Chart Container -->
-                    <div class="chart-container">
-                        <canvas id="mempoolChart"></canvas>
-                    </div>
-                    <!-- Bandwidth Usage Chart Container -->
-                    <div class="chart-container">
-                        <canvas id="bandwidthChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Blocks Tab -->
-        <div class="tab-pane" id="tab-blocks">
+        <div class="tab-pane active" id="tab-blocks">
             <h2><i class="fas fa-cubes"></i> Block History</h2>
 
             <div class="mode-switch">
@@ -285,13 +232,122 @@
 
         <!-- Admin Tab -->
         <div class="tab-pane" id="tab-admin">
-            <h2><i class="fas fa-wrench"></i> Admin Actions</h2>
-            <div class="admin-actions">
-                <button id="import-descriptors-btn" class="admin-btn">Import descriptors</button>
-                <button id="mine-blocks-btn" class="admin-btn">Mine 100 blocks</button>
-                <button id="save-blocks-btn" class="admin-btn">Save blocks to DB</button>
-            </div>
+            <h2><i class="fas fa-tools"></i> Admin Control Panel</h2>
+
             <div id="admin-message" class="admin-message"></div>
+
+            <div class="admin-grid">
+                <!-- Section 1: Wallets -->
+                <section class="admin-card">
+                    <h3><i class="fas fa-wallet"></i> Wallets</h3>
+                    <div class="card-content">
+                        <p>Initialize descriptors and sync wallet state from the node.</p>
+                        <button id="import-descriptors-btn" class="admin-btn">
+                            <i class="fas fa-file-import"></i> Import Descriptors
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Section 2: Miner -->
+                <section class="admin-card">
+                    <h3><i class="fas fa-hammer"></i> Regression Miner</h3>
+                    <div class="card-content">
+                        <p>Generate blocks on regtest to confirm transactions.</p>
+                        <button id="mine-blocks-btn" class="admin-btn">
+                            <i class="fas fa-cubes"></i> Mine 100 Blocks
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Section 3: Indexer -->
+                <section class="admin-card">
+                    <h3><i class="fas fa-database"></i> Indexer & Sync</h3>
+                    <div class="card-content">
+                        <div class="indexer-actions">
+                            <button id="save-blocks-btn" class="admin-btn">
+                                <i class="fas fa-save"></i> Save Blocks to DB
+                            </button>
+
+                            <!-- Progress Bar -->
+                            <div id="indexer-progress-container" class="progress-wrapper" style="display: none;">
+                                <div class="progress-info">
+                                    <span id="progress-label">Syncing blocks...</span>
+                                    <span id="progress-percent">0%</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div id="indexer-progress-fill" class="progress-bar-fill"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="card-divider">
+
+                        <h4>Live Scheduler Control</h4>
+                        <div class="admin-controls">
+                            <button id="admin-scheduler-toggle-btn" class="admin-btn">
+                                <i class="fas fa-play"></i> <span>Start Scheduler</span>
+                            </button>
+                            <div id="admin-scheduler-status-pill" class="status-pill status-stopped">
+                                <span class="dot"></span>
+                                <span class="status-text">Stopped</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Charts Tab -->
+        <div class="tab-pane" id="tab-charts">
+
+            <!-- Blockchain Analytics Section -->
+            <div class="blockchain-analytics">
+                <div class="analytics-header">
+                    <h3><i class="fas fa-chart-line"></i> Blockchain Metrics</h3>
+                    <div class="date-range-container" id="blockchain-daterange-container">
+                        <div id="blockchain-daterange">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="metric-buttons">
+                    <button class="metric-btn active" data-metric="tx_count">Transactions</button>
+                    <button class="metric-btn" data-metric="avg_fee_sat">Avg Fee (sat)</button>
+                    <button class="metric-btn" data-metric="avg_feerate">Fee Rate (sat/vB)</button>
+                </div>
+
+                <!-- Status Bar for Blockchain Data -->
+                <div class="status-bar blockchain-status">
+                    <div class="status-indicator">
+                        <div class="status-led"></div>
+                        <span id="blockchain-status-text">Connected</span>
+                    </div>
+                    <div id="blockchain-data-points">—</div>
+                </div>
+
+                <div id="blockchain-chart" class="blockchain-chart-container"></div>
+            </div>
+
+            <!-- Network Charts Section -->
+            <div class="network-charts-section">
+                <h2><i class="fas fa-chart-line"></i> Network Charts</h2>
+                <div class="charts-row">
+                    <!-- Fee Rate Chart Container -->
+                    <div class="chart-container">
+                        <canvas id="feeRateChart"></canvas>
+                    </div>
+                    <!-- Mempool Statistics Chart Container -->
+                    <div class="chart-container">
+                        <canvas id="mempoolChart"></canvas>
+                    </div>
+                    <!-- Bandwidth Usage Chart Container -->
+                    <div class="chart-container">
+                        <canvas id="bandwidthChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -343,13 +399,17 @@
     <h2><i class="fas fa-clock"></i> Scheduler</h2>
 
     <div class="scheduler-controls">
-        <div class="status-indicator">
-            Status: <span id="scheduler-status" class="status-badge stopped">Stopped</span>
+        <div class="admin-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+            <button id="scheduler-toggle-btn" class="admin-btn">
+                <i class="fas fa-play"></i> <span>Start Scheduler</span>
+            </button>
+
+            <div id="scheduler-status-pill" class="status-pill status-stopped">
+                <span class="dot"></span>
+                <span class="status-text">Stopped</span>
+            </div>
         </div>
-        <div class="control-buttons">
-            <button id="start-scheduler-btn" class="admin-btn">▶ Start</button>
-            <button id="stop-scheduler-btn" class="admin-btn" disabled>⏸ Stop</button>
-        </div>
+
         <div class="scheduler-config">
             <label>
                 Interval (minutes):
