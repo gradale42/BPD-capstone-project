@@ -39,6 +39,7 @@ impl BlockRepository for PostgresBlockRepository {
             .fetch_one(conn)
             .await
     }
+
     async fn save(&self, conn: &mut PgConnection, block: BlockInfo) -> Result<(), Error> {
         sqlx::query!(
             r#"INSERT INTO block_info (

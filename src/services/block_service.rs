@@ -1,23 +1,45 @@
 use crate::db::Transactional;
 use crate::domain::block::{BlockInfo, TimeseriesPoint};
 use crate::repositories::block_repository::{BlockRepository, PostgresBlockRepository};
-use sqlx::{Error, PgPool};
+use sqlx::{Error, PgConnection, PgPool};
 use std::sync::Arc;
 
 pub struct BlockService {
     repo: Arc<dyn BlockRepository>,
-    pool: PgPool,
+    db_pool: PgPool,
 }
 
 impl BlockService {
-    pub fn new(repo: Arc<dyn BlockRepository>, pool: PgPool) -> Self {
-        BlockService { repo, pool }
+    pub fn new(repo: Arc<dyn BlockRepository>, db_pool: PgPool) -> Self {
+        BlockService { repo, db_pool }
     }
 }
 
 impl BlockService {
+
+    pub async fn find_by_height(&self, height: i64)  -> Result<BlockInfo, Error> {
+        let mut conn = self.db_pool.acquire().await?;
+        let count = self.repo.find_by_height(&mut conn, height).await?;
+        Ok(count)
+    }
+
+    pub async fn find_by_hash(&self, hash: &str)  -> Result<BlockInfo, Error> {
+        let mut conn = self.db_pool.acquire().await?;
+        let count = self.repo.find_by_hash(&mut conn, hash).await?;
+        Ok(count)
+    }
+
+    pub async fn save(&self, block: BlockInfo) -> Result<(), Error> {
+        self.db_pool
+            .in_transaction(|mut tx| async move {
+                self.repo.save(&mut *tx, block).await?;
+                Ok(((), tx))
+            })
+            .await
+    }
+    
     pub async fn save_blocks(&self, blocks: Vec<BlockInfo>) -> Result<(), Error> {
-        self.pool
+        self.db_pool
             .in_transaction(|mut tx| async move {
                 for block in blocks {
                     self.repo.save(&mut *tx, block).await?;
@@ -28,7 +50,7 @@ impl BlockService {
     }
 
     pub async fn save_blocks_ignore_duplicates(&self, blocks: Vec<BlockInfo>) -> Result<(usize, usize), Error> {
-        self.pool
+        self.db_pool
             .in_transaction(|mut tx| async move {
                 println!("Starting to save {} blocks", blocks.len());
                 let mut saved = 0;
@@ -50,7 +72,7 @@ impl BlockService {
     }
 
     pub async fn get_blocks_from_db(&self, limit: i64, offset: i64, order_by: &str) -> Result<Vec<BlockInfo>, Error> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.db_pool.acquire().await?;
         println!("Loading {} blocks from database (offset: {})", limit, offset);
         let blocks = self.repo.list_blocks(&mut conn, limit, offset, order_by).await?;
         println!("Loaded {} blocks from database", blocks.len());
@@ -58,13 +80,13 @@ impl BlockService {
     }
 
     pub async fn count_blocks_in_db(&self) -> Result<i64, Error> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.db_pool.acquire().await?;
         let count = self.repo.count_blocks(&mut conn).await?;
         Ok(count)
     }
 
     pub async fn get_last_block_height(&self) -> Result<Option<i64>, sqlx::Error> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.db_pool.acquire().await?;
         let row = sqlx::query!("SELECT height FROM block_info ORDER BY height DESC LIMIT 1")
             .fetch_optional(&mut conn)
             .await?;
@@ -72,7 +94,7 @@ impl BlockService {
     }
 
     pub async fn get_timeseries(&self, from: i64, to: i64) -> Result<Vec<TimeseriesPoint>, Error> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.db_pool.acquire().await?;
         self.repo.get_timeseries(&mut conn, from, to).await
     }
 }

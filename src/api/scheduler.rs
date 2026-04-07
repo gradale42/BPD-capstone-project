@@ -22,7 +22,10 @@ pub async fn start_scheduler(
     let interval = params.interval_minutes.unwrap_or(1);
     let blocks_count = params.blocks_count.unwrap_or(100);
 
-    state.scheduler.start(interval, blocks_count).await;
+    let scheduler_service = state.scheduler_service.clone();
+    let app_state_arc = state.into_inner();
+
+    scheduler_service.start(app_state_arc, interval, blocks_count).await;
 
     HttpResponse::Ok().json(json!({
         "status": "success",
@@ -31,7 +34,7 @@ pub async fn start_scheduler(
 }
 
 pub async fn stop_scheduler(state: web::Data<AppState>) -> impl Responder {
-    state.scheduler.stop().await;
+    state.scheduler_service.stop(&state).await;
 
     HttpResponse::Ok().json(json!({
         "status": "success",
@@ -40,7 +43,7 @@ pub async fn stop_scheduler(state: web::Data<AppState>) -> impl Responder {
 }
 
 pub async fn get_scheduler_status(state: web::Data<AppState>) -> impl Responder {
-    let running = state.scheduler.is_running().await;
+    let running = state.scheduler_service.is_running().await;
 
     HttpResponse::Ok().json(SchedulerStatus { running })
 }
@@ -67,7 +70,7 @@ pub async fn get_scheduler_logs(
     let length = params.length.unwrap_or(25) as i64;
     let start = params.start.unwrap_or(0) as i64;
 
-    let total = match state.scheduler.count_logs().await {
+    let total = match state.scheduler_log_service.count_logs().await {
         Ok(count) => count as usize,
         Err(e) => {
             eprintln!("Failed to count logs: {}", e);
@@ -77,7 +80,7 @@ pub async fn get_scheduler_logs(
         }
     };
 
-    let logs = match state.scheduler.list_logs(length, start).await {
+    let logs = match state.scheduler_log_service.list_logs(length, start).await {
         Ok(logs) => logs,
         Err(e) => {
             eprintln!("Failed to list logs: {}", e);
@@ -103,7 +106,7 @@ pub async fn get_scheduler_log(
 ) -> impl Responder {
     let id = path.into_inner();
 
-    match state.scheduler.get_log(id).await {
+    match state.scheduler_log_service.get_log(id).await {
         Ok(log) => HttpResponse::Ok().json(log),
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().json(json!({
             "error": "Log not found"

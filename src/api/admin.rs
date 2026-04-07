@@ -79,7 +79,7 @@ pub async fn mine_blocks_handler(state: web::Data<AppState>, query: web::Query<M
 }
 pub async fn save_blocks(state: web::Data<AppState>) -> impl Responder {
     const DEFAULT_COUNT: u64 = 500;
-    let blocks = match get_blocks_info(state.clone(), Some(DEFAULT_COUNT)).await {
+    let blocks = match get_blocks_info(&state.clone(), Some(DEFAULT_COUNT)).await {
         Ok(b) => b,
         Err(e) => {
             eprintln!("RPC error: {}", e);

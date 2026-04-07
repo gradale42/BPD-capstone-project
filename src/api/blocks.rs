@@ -83,7 +83,7 @@ pub async fn get_blocks(
         }
         _ => {
             // Live mode (RPC)
-            match get_blocks_info(state, Some(length)).await {
+            match get_blocks_info(&state.clone(), Some(length)).await {
                 Ok(blocks) => {
                     let response = DataTableResponse {
                         draw: params.draw,

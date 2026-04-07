@@ -24,13 +24,14 @@ use crate::repositories::{
     BlockRepository, PostgresBlockRepository,
     SchedulerLogRepository, PostgresSchedulerLogRepository,
 };
-
+use crate::services::scheduler::SchedulerService;
 
 pub struct AppState {
     pub bitcoin_clients: DashMap<String, Arc<Mutex<Client>>>,
     pub db_pool: PgPool,
     pub block_service: Arc<BlockService>,
     pub scheduler_log_service: Arc<SchedulerLogService>,
+    pub scheduler_service : Arc<SchedulerService>,
 }
 
 impl AppState {
@@ -111,12 +112,14 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         block_repo.clone(),
         scheduler_log_repo.clone(),
     ));
+    let scheduler_service = Arc::new(SchedulerService::new());
 
     let app_state = web::Data::new(AppState {
         bitcoin_clients: DashMap::new(),
         db_pool,
         block_service,
         scheduler_log_service,
+        scheduler_service
     });
 
     println!("=== Starting bitcoin client ===");

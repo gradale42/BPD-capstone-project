@@ -4,7 +4,7 @@ use crate::AppState;
 use crate::services::bitcoin::rpc::get_last_block_height as get_last_block_from_rpc;
 
 pub async fn get_indexer_stats(state: web::Data<AppState>) -> impl Responder {
-    let last_block_live = match get_last_block_from_rpc(&state).await {
+    let last_block_live = match get_last_block_from_rpc(&state.clone()).await {
         Ok(height) => height,
         Err(e) => {
             eprintln!("RPC error: {}", e);
