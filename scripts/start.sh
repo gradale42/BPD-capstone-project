@@ -10,6 +10,11 @@ fi
 
 set -e  # Exit immediately if any command fails
 
+mkdir -p ./docker/datadir
+if [ ! -d "./docker/datadir/node0" ]; then
+    cp -r ./datadir/node0 ./docker/datadir/
+fi
+
 # Start docker
 docker compose -f ./docker/docker-compose.yml up -d
 echo " Docker started."

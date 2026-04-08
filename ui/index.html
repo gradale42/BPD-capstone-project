@@ -230,6 +230,55 @@
             </div>
         </div>
 
+        <!-- Scheduler Tab -->
+        <div class="tab-pane" id="tab-scheduler">
+            <h2><i class="fas fa-clock"></i> Scheduler</h2>
+
+            <div class="scheduler-controls">
+                <div class="admin-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    <button id="scheduler-toggle-btn" class="admin-btn">
+                        <i class="fas fa-play"></i> <span>Start Scheduler</span>
+                    </button>
+
+                    <div id="scheduler-status-pill" class="status-pill status-stopped">
+                        <span class="dot"></span>
+                        <span class="status-text">Stopped</span>
+                    </div>
+                </div>
+
+                <div class="scheduler-config">
+                    <label>
+                        Interval (minutes):
+                        <input type="number" id="scheduler-interval" value="1" min="1" max="60">
+                    </label>
+                    <label>
+                        Blocks per sync:
+                        <input type="number" id="scheduler-blocks-count" value="100" min="1" max="1000">
+                    </label>
+                </div>
+            </div>
+
+            <h3>Synchronization Logs</h3>
+            <div class="table-container" style="width: 100%; clear: both;">
+                <table id="scheduler-logs-table" class="display responsive nowrap" style="width:100%">
+                    <thead>
+                    <tr>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                </table>
+            </div>
+
+            <div class="log-details">
+                <h4>Result Details:</h4>
+                <pre id="log-result-details" class="log-result-content">Select a log row to view details</pre>
+            </div>
+        </div>
+
+
         <!-- Admin Tab -->
         <div class="tab-pane" id="tab-admin">
             <h2><i class="fas fa-tools"></i> Admin Control Panel</h2>
@@ -241,7 +290,7 @@
                 <section class="admin-card">
                     <h3><i class="fas fa-wallet"></i> Wallets</h3>
                     <div class="card-content">
-                        <p>Initialize descriptors and sync wallet state from the node.</p>
+                        <h4>Initialize descriptors and sync wallet state from the node.</h4>
                         <button id="import-descriptors-btn" class="admin-btn">
                             <i class="fas fa-file-import"></i> Import Descriptors
                         </button>
@@ -252,7 +301,7 @@
                 <section class="admin-card">
                     <h3><i class="fas fa-hammer"></i> Regression Miner</h3>
                     <div class="card-content">
-                        <p>Generate blocks on regtest to confirm transactions.</p>
+                        <h4>Generate blocks on regtest to confirm transactions.</h4>
                         <button id="mine-blocks-btn" class="admin-btn">
                             <i class="fas fa-cubes"></i> Mine 100 Blocks
                         </button>
@@ -391,52 +440,6 @@
             </div>
 
         </div>
-    </div>
-</div>
-
-<!-- Scheduler Tab -->
-<div class="tab-pane" id="tab-scheduler">
-    <h2><i class="fas fa-clock"></i> Scheduler</h2>
-
-    <div class="scheduler-controls">
-        <div class="admin-controls" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-            <button id="scheduler-toggle-btn" class="admin-btn">
-                <i class="fas fa-play"></i> <span>Start Scheduler</span>
-            </button>
-
-            <div id="scheduler-status-pill" class="status-pill status-stopped">
-                <span class="dot"></span>
-                <span class="status-text">Stopped</span>
-            </div>
-        </div>
-
-        <div class="scheduler-config">
-            <label>
-                Interval (minutes):
-                <input type="number" id="scheduler-interval" value="1" min="1" max="60">
-            </label>
-            <label>
-                Blocks per sync:
-                <input type="number" id="scheduler-blocks-count" value="100" min="1" max="1000">
-            </label>
-        </div>
-    </div>
-
-    <h3>Synchronization Logs</h3>
-    <table id="scheduler-logs-table" class="display responsive nowrap" style="width:100%">
-        <thead>
-        <tr>
-            <th>Start Time</th>
-            <th>End Time</th>
-            <th>Description</th>
-            <th>Status</th>
-        </tr>
-        </thead>
-    </table>
-
-    <div class="log-details">
-        <h4>Result Details:</h4>
-        <pre id="log-result-details" class="log-result-content">Select a log row to view details</pre>
     </div>
 </div>
 

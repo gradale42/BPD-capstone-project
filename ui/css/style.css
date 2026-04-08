@@ -1242,8 +1242,9 @@ table {
 .log-details {
     margin-top: 20px;
     padding: 15px;
-    background: #f8f9fa;
+    background: #fff;
     border-radius: 8px;
+    border: 1px solid #e0e0e0;
 }
 
 .log-result-content {
@@ -1474,7 +1475,7 @@ body.dark .network-charts-section {
 
 .card-content p {
     font-size: 0.9em;
-    color: #ccc;
+    color: #000;
     margin-bottom: 15px;
 }
 
@@ -1514,3 +1515,41 @@ body.dark .network-charts-section {
 
 .card-divider { border: 0; border-top: 1px dashed #333; margin: 20px 0; }
 
+#tab-scheduler.tab-pane.active {
+    display: block;
+    width: 100%;
+}
+
+.scheduler-controls {
+    width: 100%;
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+.scheduler-config {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.scheduler-config label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #4a5568;
+}
+
+#tab-scheduler {
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none;
+}
+
+#tab-scheduler.active {
+    display: block;
+}

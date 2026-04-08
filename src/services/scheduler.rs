@@ -97,7 +97,7 @@ impl SchedulerService {
 
         println!("Fetching {} blocks from RPC...", blocks_count);
 
-        let blocks = match get_blocks_info(state.clone(), Some(blocks_count)).await {
+        let blocks = match get_blocks_info(state, Some(blocks_count)).await {
             Ok(blocks) => blocks,
             Err(e) => {
                 result.error = Some(e.to_string());
