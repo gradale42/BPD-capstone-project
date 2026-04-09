@@ -17,6 +17,10 @@ bitcoin:
       rpc_url: "http://localhost:18443"
       rpc_user: "alice"
       rpc_password: "password"
+    signet:
+      rpc_url: "http://localhost:38332"
+      rpc_user: "alice"
+      rpc_password: "password"
     testnet:
       rpc_url: "http://localhost:18332"
       rpc_user: "alice"

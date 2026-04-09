@@ -70,35 +70,30 @@ impl AppState {
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
     let config = get_configuration().expect("Failed to read configuration.");
 
-    // Initialize node configurations for each network
     let mut network_configs = HashMap::new();
 
-    // Regtest configuration
     network_configs.insert(Network::Regtest, BitcoinNodeConfig {
-        rpc_url: "http://localhost:18443".to_string(),
-        rpc_user: config.bitcoin.default_config.rpc_user.clone(),
-        rpc_password: config.bitcoin.default_config.rpc_password.clone(),
+        rpc_url: config.bitcoin.get_node_config(Network::Regtest).rpc_url,
+        rpc_user: config.bitcoin.get_node_config(Network::Regtest).rpc_user,
+        rpc_password: config.bitcoin.get_node_config(Network::Regtest).rpc_password,
     });
 
-    // Signet configuration
     network_configs.insert(Network::Signet, BitcoinNodeConfig {
-        rpc_url: "http://localhost:38332".to_string(),
-        rpc_user: config.bitcoin.default_config.rpc_user.clone(),
-        rpc_password: config.bitcoin.default_config.rpc_password.clone(),
+        rpc_url: config.bitcoin.get_node_config(Network::Signet).rpc_url,
+        rpc_user: config.bitcoin.get_node_config(Network::Signet).rpc_user,
+        rpc_password: config.bitcoin.get_node_config(Network::Signet).rpc_password,
     });
 
-    // Testnet configuration
     network_configs.insert(Network::Testnet, BitcoinNodeConfig {
-        rpc_url: "http://localhost:18332".to_string(),
-        rpc_user: config.bitcoin.default_config.rpc_user.clone(),
-        rpc_password: config.bitcoin.default_config.rpc_password.clone(),
+        rpc_url: config.bitcoin.get_node_config(Network::Testnet).rpc_url,
+        rpc_user: config.bitcoin.get_node_config(Network::Testnet).rpc_user,
+        rpc_password: config.bitcoin.get_node_config(Network::Testnet).rpc_password,
     });
 
-    // Mainnet configuration (adjust URL as needed)
     network_configs.insert(Network::Mainnet, BitcoinNodeConfig {
         rpc_url: config.bitcoin.get_node_config(Network::Mainnet).rpc_url,
-        rpc_user: config.bitcoin.default_config.rpc_user.clone(),
-        rpc_password: config.bitcoin.default_config.rpc_password.clone(),
+        rpc_user: config.bitcoin.get_node_config(Network::Mainnet).rpc_user,
+        rpc_password: config.bitcoin.get_node_config(Network::Mainnet).rpc_password,
     });
 
     let node_manager = Arc::new(BitcoinNodeManager::new(network_configs, Network::Regtest));
