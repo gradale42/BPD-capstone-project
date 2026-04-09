@@ -44,6 +44,7 @@ impl DatabaseSettings {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Network {
     Regtest,
+    Signet,
     Testnet,
     Mainnet,
 }
@@ -52,6 +53,7 @@ impl Network {
     pub fn rpc_port(&self) -> u16 {
         match self {
             Network::Regtest => 18443,
+            Network::Signet => 38332,
             Network::Testnet => 18332,
             Network::Mainnet => 8332,
         }
@@ -60,6 +62,7 @@ impl Network {
     pub fn p2p_port(&self) -> u16 {
         match self {
             Network::Regtest => 18444,
+            Network::Signet => 38333,
             Network::Testnet => 18333,
             Network::Mainnet => 8333,
         }
@@ -68,6 +71,7 @@ impl Network {
     pub fn as_str(&self) -> &'static str {
         match self {
             Network::Regtest => "regtest",
+            Network::Signet => "signet",
             Network::Testnet => "testnet",
             Network::Mainnet => "mainnet",
         }
@@ -76,6 +80,7 @@ impl Network {
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "regtest" => Some(Network::Regtest),
+            "signet" => Some(Network::Signet),
             "testnet" => Some(Network::Testnet),
             "mainnet" => Some(Network::Mainnet),
             _ => None,

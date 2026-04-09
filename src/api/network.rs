@@ -44,6 +44,7 @@ pub async fn get_current_network(state: web::Data<AppState>) -> impl Responder {
         current_network: current.as_str().to_string(),
         available_networks: vec![
             "regtest".to_string(),
+            "signet".to_string(),
             "testnet".to_string(),
             "mainnet".to_string(),
         ],
@@ -70,7 +71,7 @@ pub async fn get_network_info(state: web::Data<AppState>) -> impl Responder {
 
     HttpResponse::Ok().json(serde_json::json!({
         "current_network": current.as_str(),
-        "available_networks": ["regtest", "testnet", "mainnet"],
+        "available_networks": ["regtest", "signet", "testnet", "mainnet"],
         "blockchain_info": blockchain_info,
     }))
 }

@@ -80,6 +80,13 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         rpc_password: config.bitcoin.default_config.rpc_password.clone(),
     });
 
+    // Signet configuration
+    network_configs.insert(Network::Signet, BitcoinNodeConfig {
+        rpc_url: "http://localhost:38332".to_string(),
+        rpc_user: config.bitcoin.default_config.rpc_user.clone(),
+        rpc_password: config.bitcoin.default_config.rpc_password.clone(),
+    });
+
     // Testnet configuration
     network_configs.insert(Network::Testnet, BitcoinNodeConfig {
         rpc_url: "http://localhost:18332".to_string(),

@@ -2,6 +2,7 @@ services:
   bitcoind:
     image: lncm/bitcoind:v28.0
     container_name: bitcoind-regtest
+    profiles: ["regtest", "all"]
     user: "0:0"
     command:
       - -regtest=1
@@ -21,24 +22,47 @@ services:
     networks:
       - bpd-network
 
+  # Signet
+  bitcoind-signet:
+    image: lncm/bitcoind:v28.0
+    container_name: bitcoind-signet
+    profiles: ["signet", "all"]
+    command:
+      - -signet=1
+      - -server=1
+      - -rpcbind=0.0.0.0
+      - -rpcallowip=0.0.0.0/0
+      - -rpcuser=alice
+      - -rpcpassword=password
+      - -prune=550
+      - -datadir=/home/bitcoin/.bitcoin
+    ports:
+      - "38332:38332"  # RPC signet
+      - "38333:38333"  # P2P signet
+    volumes:
+      - ./datadir/node0:/home/bitcoin/.bitcoin
+    networks:
+      - bpd-network
+
   # Testnet
   bitcoind-testnet:
     image: lncm/bitcoind:v28.0
     container_name: bitcoind-testnet
+    profiles: ["testnet", "all"]
     command:
       - -testnet=1
       - -server=1
-      - -txindex=1
       - -rpcbind=0.0.0.0
       - -rpcallowip=0.0.0.0/0
       - -rpcuser=alice
       - -rpcpassword=password
       - -prune=1000
+      - -datadir=/home/bitcoin/.bitcoin
     ports:
       - "18332:18332"  # RPC testnet
       - "18333:18333"  # P2P testnet
     volumes:
-      - ./datadir/testnet:/home/bitcoin/.bitcoin
+      - ./datadir/node0:/home/bitcoin/.bitcoin
     networks:
       - bpd-network
 
