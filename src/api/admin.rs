@@ -40,7 +40,7 @@ pub async fn mine_blocks_handler(state: web::Data<AppState>, query: web::Query<M
         }));
     }
 
-    match state.get_bitcoin_client("mining_wallet").lock() {
+    match state.get_bitcoin_client("miner_wallet").lock() {
         Ok(mining_client) => {
             match setup_mining_address(&mining_client) {
                 Ok(mining_address) => {

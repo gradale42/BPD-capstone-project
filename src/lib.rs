@@ -122,18 +122,6 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         scheduler_service
     });
 
-    println!("=== Starting bitcoin client ===");
-    match app_state.get_default_bitcoin_client().lock() {
-        Ok(client) => {
-            setup_wallet(&client, "mining_wallet");
-            setup_wallet(&client, "student");
-        },
-        Err(e) => {
-            eprintln!("⚠️  Failed to initialize bitcoin client: {}", e);
-            eprintln!("⚠️  Starting with mock data only");
-        }
-    };
-
     let config = get_configuration().expect("Failed to read configuration.");
     println!("\n================================================");
     println!("🌐 WEB SERVER:    http://127.0.0.1:{}", config.application_port);

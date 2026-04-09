@@ -21,6 +21,7 @@ echo " Docker started."
 
 sleep 5
 
+./scripts/smart_fund.sh
 ./scripts/init_db.sh
 
 cargo run

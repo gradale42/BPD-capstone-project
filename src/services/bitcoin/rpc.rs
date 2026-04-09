@@ -195,7 +195,7 @@ pub async fn get_blocks_info(
                     avg_fee_sat: avg_fee_sats as i64,
                     avg_feerate: avg_fee_rate_sats,
                     total_fees_sat: total_fees_sats as i64,
-                    difficulty: block.header.difficulty() as f64,
+                    difficulty: 0.0, //block.header.difficulty() as f64,
                     size: 0, // block size is not directly available in the block data, you may need to calculate it or fetch it separately
                     weight: 0, // block weight is not directly available in the block data, you may need to calculate it or fetch it separately
                     subsidy_sat: block_stats.subsidy.to_sat() as i64,
