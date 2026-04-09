@@ -8,6 +8,7 @@ pub mod wallets;
 pub mod scheduler;
 pub mod indexer;
 pub mod live;
+pub mod network;
 
 use actix_web::web;
 
@@ -30,6 +31,9 @@ pub fn config_real(
 ) {
     cfg.service(
         web::scope("/api")
+            .route("/network/switch", web::post().to(network::switch_network))
+            .route("/network/current", web::get().to(network::get_current_network))
+            .route("/network/info", web::get().to(network::get_network_info))
             .route("/live", web::get().to(live::get_live_stats))
             .route("/indexer", web::get().to(indexer::get_indexer_stats))
             .route("/stats", web::get().to(stats::get_stats))

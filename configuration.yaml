@@ -1,13 +1,29 @@
-application_port: 3000
-
 database:
-  host: "127.0.0.1"
+  username: postgres
+  password: password
   port: 5432
-  username: "postgres"
-  password: "password"
-  database_name: "bitcoin_dashboard"
+  host: localhost
+  database_name: bitcoin_dashboard
 
 bitcoin:
+  # Default configuration (used as fallback)
   rpc_url: "http://localhost:18443"
   rpc_user: "alice"
   rpc_password: "password"
+  
+  # Network-specific configurations
+  networks:
+    regtest:
+      rpc_url: "http://localhost:18443"
+      rpc_user: "alice"
+      rpc_password: "password"
+    testnet:
+      rpc_url: "http://localhost:18332"
+      rpc_user: "alice"
+      rpc_password: "password"
+    mainnet:
+      rpc_url: "http://localhost:8332"  # Adjust if using different port/proxy
+      rpc_user: "alice"
+      rpc_password: "password"
+
+application_port: 8080

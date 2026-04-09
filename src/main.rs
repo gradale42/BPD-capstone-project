@@ -18,9 +18,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let actual_addr = listener.local_addr()?;
 
     println!("\n🚀 SERVER STARTING...");
-    println!("🌐 URL: http://{}", actual_addr);
-    println!("🐘 DB:  {}", configuration.database.database_name);
-    println!("₿  RPC: {}", configuration.bitcoin.rpc_url);
 
     // 4. Start and WAIT
     run(listener, connection_pool)?.await?;

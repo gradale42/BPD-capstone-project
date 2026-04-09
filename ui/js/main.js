@@ -4,8 +4,129 @@ const USE_MOCK = false;
 
 const API_BASE = USE_MOCK ? '/api/mock' : '/api';
 
+// Network switching functionality
+async function initNetworkSelector() {
+    const networkSelect = document.getElementById('network-select');
+    if (!networkSelect) return;
+
+    // Get current network
+    try {
+        const response = await fetch('/api/network/current');
+        const data = await response.json();
+        networkSelect.value = data.current_network;
+        updateNetworkInfo();
+    } catch (error) {
+        console.error('Error fetching current network:', error);
+    }
+
+    // Add change event listener
+    networkSelect.addEventListener('change', async (e) => {
+        const newNetwork = e.target.value;
+
+        // Show loading state
+        const originalText = networkSelect.options[networkSelect.selectedIndex].text;
+        networkSelect.disabled = true;
+
+        try {
+            const response = await fetch('/api/network/switch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ network: newNetwork })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                console.log('Network switched:', result);
+                showNotification(`Switched to ${newNetwork} network`, 'success');
+
+                // Refresh all data
+                await refreshAllData();
+                await updateNetworkInfo();
+            } else {
+                showNotification(`Failed to switch network: ${result.message}`, 'error');
+                networkSelect.value = networkSelect.getAttribute('data-current') || 'regtest';
+            }
+        } catch (error) {
+            console.error('Error switching network:', error);
+            showNotification('Error switching network', 'error');
+            networkSelect.value = networkSelect.getAttribute('data-current') || 'regtest';
+        } finally {
+            networkSelect.disabled = false;
+        }
+    });
+
+    // Auto-refresh network info every 30 seconds
+    setInterval(updateNetworkInfo, 30000);
+}
+
+async function updateNetworkInfo() {
+    try {
+        const response = await fetch('/api/network/info');
+        const data = await response.json();
+
+        const indicator = document.getElementById('network-indicator');
+        const blockHeightSpan = document.getElementById('network-block-height');
+
+        if (data.blockchain_info && data.blockchain_info.blocks) {
+            blockHeightSpan.textContent = `Block ${data.blockchain_info.blocks.toLocaleString()}`;
+            indicator.style.backgroundColor = '#4caf50';
+        } else {
+            blockHeightSpan.textContent = 'Connected';
+            indicator.style.backgroundColor = '#f7931a';
+        }
+
+        // Store current network in select element
+        const networkSelect = document.getElementById('network-select');
+        if (networkSelect && networkSelect.value !== data.current_network) {
+            networkSelect.value = data.current_network;
+        }
+        networkSelect.setAttribute('data-current', data.current_network);
+
+    } catch (error) {
+        console.error('Error updating network info:', error);
+        const indicator = document.getElementById('network-indicator');
+        const blockHeightSpan = document.getElementById('network-block-height');
+        if (indicator) indicator.style.backgroundColor = '#f44336';
+        if (blockHeightSpan) blockHeightSpan.textContent = 'Error connecting';
+    }
+}
+
+async function refreshAllData() {
+    // Refresh all tables and tiles
+    await Promise.all([
+        updateLiveTiles(),
+        fetchIndexerStats(),
+        // Add other refresh functions as needed
+        window.refreshBlocksTable && window.refreshBlocksTable(),
+        window.refreshMempoolTable && window.refreshMempoolTable(),
+        window.refreshPeersTable && window.refreshPeersTable(),
+    ]);
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
+                    background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'}; 
+                    color: white; padding: 12px 20px; border-radius: 5px; 
+                    z-index: 10000; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+            ${message}
+        </div>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded - initializing tabs');
+
+    // Initialize network selector
+    initNetworkSelector();
 
     // Initialize tabs
     const tabButtons = document.querySelectorAll('.tab-button');
@@ -118,7 +239,7 @@ function updateTimestamp() {
 // Function for the Live Stats tiles
 async function fetchLiveStats() {
     try {
-        const response = await fetch('/api/live');   // используем ваш новый эндпоинт
+        const response = await fetch('/api/live');
         const data = await response.json();
 
         document.getElementById('mempool-count').textContent = data.mempool_count?.toLocaleString() || '--';
@@ -144,7 +265,7 @@ async function fetchIndexerStats() {
         const isEqual = (lastBlockLive === lastBlockIndex) && lastBlockLive !== '--';
         const indicatorColor = isEqual ? 'green' : 'red';
 
-        // Обновляем содержимое плитки Last block
+        // Update the Last block tile content
         const tile = document.getElementById('last-block-tile');
         if (tile) {
             tile.innerHTML = `
@@ -174,8 +295,18 @@ async function fetchIndexerStats() {
     }
 }
 
+// Initialize charts
+function initCharts() {
+    // This function will be overridden by charts.js
+    if (typeof window.initAllCharts === 'function') {
+        window.initAllCharts();
+    }
+}
+
+// Call initial fetches
 fetchLiveStats();
 fetchIndexerStats();
 
+// Set up periodic updates
 setInterval(fetchLiveStats, 10000);
 setInterval(fetchIndexerStats, 10000);

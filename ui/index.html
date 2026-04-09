@@ -50,10 +50,28 @@
 <div class="container">
     <!-- Header Section -->
     <header>
-        <h1><i class="fas fa-bitcoin"></i> Bitcoin Network Dashboard</h1>
-        <div class="last-update">
-            <span>Last update: </span>
-            <span id="update-time">--:--:--</span>
+        <div class="header-left">
+            <h1><i class="fas fa-bitcoin"></i> Bitcoin Network Dashboard</h1>
+        </div>
+        <div class="header-right">
+            <div class="last-update">
+                <span>Last update: </span>
+                <span id="update-time">--:--:--</span>
+            </div>
+            <div class="network-selector">
+                <label>
+                    <i class="fas fa-globe"></i> Network:
+                </label>
+                <select id="network-select">
+                    <option value="regtest">Regtest (Local)</option>
+                    <option value="testnet">Testnet</option>
+                    <option value="mainnet">Mainnet</option>
+                </select>
+                <div id="network-status">
+                    <span id="network-indicator"></span>
+                    <span id="network-block-height">Connecting...</span>
+                </div>
+            </div>
         </div>
     </header>
 

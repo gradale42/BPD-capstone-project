@@ -1,5 +1,5 @@
 use bitcoincore_rpc::bitcoin::{Address, Network};
-use bitcoincore_rpc::{Auth, Client as BitcoinClient, RpcApi};
+use bitcoincore_rpc::{Auth, Client as BitcoinClient, Client, RpcApi};
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -10,6 +10,7 @@ use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
 use crate::AppState;
 use crate::domain::block::BlockInfo;
 
+#[deprecated(note = "Use BitcoinNodeManager instead")]
 pub fn connect() -> Result<BitcoinClient, Box<dyn std::error::Error>> {
     let bitcoin_rpc = BitcoinClient::new(
         "http://localhost:18443",
@@ -20,12 +21,25 @@ pub fn connect() -> Result<BitcoinClient, Box<dyn std::error::Error>> {
     Ok(bitcoin_rpc)
 }
 
+#[deprecated(note = "Use BitcoinNodeManager instead")]
 pub fn connect_to_wallet(wallet_name: &str) -> Result<BitcoinClient, Box<dyn Error>> {
     let url = format!("http://localhost:18443/wallet/{}", wallet_name);
     BitcoinClient::new(
         &url,
         Auth::UserPass("alice".to_string(), "password".to_string()),
     ).map_err(|e| e.into())
+}
+
+
+pub fn create_client(rpc_url: &str, rpc_user: &str, rpc_password: &str) -> Result<Client, Box<dyn Error>> {
+    let auth = Auth::UserPass(rpc_user.to_string(), rpc_password.to_string());
+    Ok(Client::new(rpc_url, auth)?)
+}
+
+pub fn create_wallet_client(rpc_url: &str, wallet_name: &str, rpc_user: &str, rpc_password: &str) -> Result<Client, Box<dyn Error>> {
+    let wallet_url = format!("{}/wallet/{}", rpc_url, wallet_name);
+    let auth = Auth::UserPass(rpc_user.to_string(), rpc_password.to_string());
+    Ok(Client::new(&wallet_url, auth)?)
 }
 
 pub fn setup_wallet(rpc: &BitcoinClient, name: &str) -> Result<(), Box<dyn Error>> {

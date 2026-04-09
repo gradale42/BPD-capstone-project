@@ -1,5 +1,6 @@
 use crate::api::{blocks, mempool, peers, stats};
 use actix_web::web;
+use std::collections::HashMap;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -40,11 +41,81 @@ impl DatabaseSettings {
     }
 }
 
-#[derive(serde::Deserialize)]
-pub struct BitcoinSettings {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum Network {
+    Regtest,
+    Testnet,
+    Mainnet,
+}
+
+impl Network {
+    pub fn rpc_port(&self) -> u16 {
+        match self {
+            Network::Regtest => 18443,
+            Network::Testnet => 18332,
+            Network::Mainnet => 8332,
+        }
+    }
+
+    pub fn p2p_port(&self) -> u16 {
+        match self {
+            Network::Regtest => 18444,
+            Network::Testnet => 18333,
+            Network::Mainnet => 8333,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Network::Regtest => "regtest",
+            Network::Testnet => "testnet",
+            Network::Mainnet => "mainnet",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "regtest" => Some(Network::Regtest),
+            "testnet" => Some(Network::Testnet),
+            "mainnet" => Some(Network::Mainnet),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+#[derive(serde::Deserialize, Clone)]
+pub struct BitcoinNodeConfig {
     pub rpc_url: String,
     pub rpc_user: String,
     pub rpc_password: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct BitcoinSettings {
+    #[serde(flatten)]
+    pub default_config: BitcoinNodeConfig,
+    pub networks: HashMap<String, BitcoinNodeConfig>,
+}
+
+impl BitcoinSettings {
+    pub fn get_node_config(&self, network: Network) -> BitcoinNodeConfig {
+        let network_str = network.as_str();
+
+        if let Some(network_config) = self.networks.get(network_str) {
+            network_config.clone()
+        } else {
+            // Fallback to default with port substitution
+            let mut config = self.default_config.clone();
+            config.rpc_url = format!("http://localhost:{}", network.rpc_port());
+            config
+        }
+    }
 }
 
 pub fn config_mock(cfg: &mut web::ServiceConfig) {
