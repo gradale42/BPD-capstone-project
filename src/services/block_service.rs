@@ -1,6 +1,6 @@
 use crate::domain::block::{BlockInfo, TimeseriesPoint};
 use crate::repositories::block_repository::{BlockRepository, PostgresBlockRepository};
-use crate::services::{ExecutionCtx, Transactional};
+use crate::services::ExecutionCtx;
 use sqlx::{Error, PgConnection, PgPool};
 use std::sync::Arc;
 
@@ -30,76 +30,76 @@ impl BlockService {
     }
 
     pub async fn save(&self, ctx: &mut ExecutionCtx, block: BlockInfo) -> Result<(), Error> {
-        ctx.in_transaction(|tx| {
-            Box::pin(async move {
-                self.repo.save(tx, ctx.network, block).await?;
-                Ok(())
-            })
+        let network = ctx.network;
+        ctx.execute_in_transaction(async |tx| {
+            self.repo.save(tx, network, block).await?;
+            Ok(())
         })
         .await
     }
 
-    pub async fn save_blocks(&self, blocks: Vec<BlockInfo>) -> Result<(), Error> {
-        self.db_pool
-            .in_transaction(|mut tx| async move {
-                for block in blocks {
-                    self.repo.save(&mut *tx, block).await?;
-                }
-                Ok(((), tx))
-            })
-            .await
+    pub async fn save_blocks(
+        &self, ctx: &mut ExecutionCtx, blocks: Vec<BlockInfo>,
+    ) -> Result<(), Error> {
+        let network = ctx.network;
+        ctx.execute_in_transaction(async |tx| {
+            for block in blocks {
+                self.repo.save(tx, network, block).await?;
+            }
+            Ok(())
+        })
+        .await
     }
 
     pub async fn save_blocks_ignore_duplicates(
-        &self, blocks: Vec<BlockInfo>,
+        &self, ctx: &mut ExecutionCtx, blocks: Vec<BlockInfo>,
     ) -> Result<(usize, usize), Error> {
-        self.db_pool
-            .in_transaction(|mut tx| async move {
-                println!("Starting to save {} blocks", blocks.len());
-                let mut saved = 0;
-                let mut skipped = 0;
-                for block in blocks {
-                    match self.repo.find_by_height(&mut *tx, block.height).await {
-                        Ok(_) => skipped += 1,
-                        Err(sqlx::Error::RowNotFound) => {
-                            self.repo.save(&mut *tx, block).await?;
-                            saved += 1;
-                        }
-                        Err(e) => return Err(e),
+        let network = ctx.network;
+        ctx.execute_in_transaction(async |tx| {
+            println!("Starting to save {} blocks", blocks.len());
+            let mut saved = 0;
+            let mut skipped = 0;
+            for block in blocks {
+                match self.repo.find_by_height(tx, network, block.height).await {
+                    Ok(_) => skipped += 1,
+                    Err(sqlx::Error::RowNotFound) => {
+                        self.repo.save(tx, network, block).await?;
+                        saved += 1;
                     }
+                    Err(e) => return Err(e),
                 }
-                println!("Saved {} blocks, skipped {} duplicates", saved, skipped);
-                Ok(((saved, skipped), tx))
-            })
-            .await
+            }
+            println!("Saved {} blocks, skipped {} duplicates", saved, skipped);
+            Ok((saved, skipped))
+        })
+        .await
     }
 
     pub async fn get_blocks_from_db(
-        &self, limit: i64, offset: i64, order_by: &str,
+        &self, ctx: &mut ExecutionCtx, limit: i64, offset: i64, order_by: &str,
     ) -> Result<Vec<BlockInfo>, Error> {
-        let mut conn = self.db_pool.acquire().await?;
         println!("Loading {} blocks from database (offset: {})", limit, offset);
-        let blocks = self.repo.list_blocks(&mut conn, limit, offset, order_by).await?;
+        let blocks =
+            self.repo.list_blocks(&mut ctx.conn, ctx.network, limit, offset, order_by).await?;
         println!("Loaded {} blocks from database", blocks.len());
         Ok(blocks)
     }
 
-    pub async fn count_blocks_in_db(&self) -> Result<i64, Error> {
-        let mut conn = self.db_pool.acquire().await?;
-        let count = self.repo.count_blocks(&mut conn).await?;
+    pub async fn count_blocks_in_db(&self, ctx: &mut ExecutionCtx) -> Result<i64, Error> {
+        let count = self.repo.count_blocks(&mut ctx.conn, ctx.network).await?;
         Ok(count)
     }
 
-    pub async fn get_last_block_height(&self) -> Result<Option<i64>, sqlx::Error> {
-        let mut conn = self.db_pool.acquire().await?;
-        let row = sqlx::query!("SELECT height FROM block_info ORDER BY height DESC LIMIT 1")
-            .fetch_optional(&mut conn)
-            .await?;
-        Ok(row.map(|r| r.height))
+    pub async fn get_last_block_height(
+        &self, ctx: &mut ExecutionCtx,
+    ) -> Result<Option<i64>, sqlx::Error> {
+        let height = self.repo.get_last_block_height(&mut ctx.conn, ctx.network).await?;
+        Ok(height)
     }
 
-    pub async fn get_timeseries(&self, from: i64, to: i64) -> Result<Vec<TimeseriesPoint>, Error> {
-        let mut conn = self.db_pool.acquire().await?;
-        self.repo.get_timeseries(&mut conn, from, to).await
+    pub async fn get_timeseries(
+        &self, ctx: &mut ExecutionCtx, from: i64, to: i64,
+    ) -> Result<Vec<TimeseriesPoint>, Error> {
+        self.repo.get_timeseries(&mut ctx.conn, ctx.network, from, to).await
     }
 }

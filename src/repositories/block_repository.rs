@@ -26,9 +26,14 @@ pub trait BlockRepository: Send + Sync {
     async fn count_blocks(
         &self, conn: &mut PgConnection, network: Network
     ) -> Result<i64, Error>;
+
+
+    async fn get_last_block_height(
+        &self, conn: &mut PgConnection, network: Network
+    ) -> Result<Option<i64>, sqlx::Error>;
     
     async fn get_timeseries(
-        &self, conn: &mut PgConnection, from: i64, to: i64,
+        &self, conn: &mut PgConnection, network: Network, from: i64, to: i64,
     ) -> Result<Vec<TimeseriesPoint>, Error>;
 }
 
@@ -117,13 +122,24 @@ impl BlockRepository for PostgresBlockRepository {
         Ok(rows)
     }
 
-    async fn count_blocks(&self, conn: &mut PgConnection, network: Network) -> Result<i64, Error> {
+    async fn count_blocks(
+        &self, conn: &mut PgConnection, network: Network
+    ) -> Result<i64, Error> {
         let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM block_info").fetch_one(conn).await?;
         Ok(row.0)
     }
 
+    async fn get_last_block_height(
+        &self, conn: &mut PgConnection, network: Network
+    ) -> Result<Option<i64>, sqlx::Error> {
+        let row = sqlx::query!("SELECT height FROM block_info ORDER BY height DESC LIMIT 1")
+            .fetch_optional(conn)
+            .await?;
+        Ok(row.map(|r| r.height))
+    }
+
     async fn get_timeseries(
-        &self, conn: &mut PgConnection, from: i64, to: i64,
+        &self, conn: &mut PgConnection, network: Network, from: i64, to: i64,
     ) -> Result<Vec<TimeseriesPoint>, Error> {
         sqlx::query_as!(
             TimeseriesPoint,

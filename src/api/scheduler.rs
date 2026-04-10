@@ -3,6 +3,7 @@ use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
+use crate::services::ExecutionCtx;
 
 #[derive(Debug, Deserialize)]
 pub struct StartSchedulerParams {
@@ -70,7 +71,18 @@ pub async fn get_scheduler_logs(
     let length = params.length.unwrap_or(25) as i64;
     let start = params.start.unwrap_or(0) as i64;
 
-    let total = match state.scheduler_log_service.count_logs().await {
+    let network = state.node_manager.get_current_network();
+    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
+        Ok(context) => context,
+        Err(e) => {
+            eprintln!("Failed to acquire DB connection: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": format!("Database error: {}", e)
+            }));
+        }
+    };
+
+    let total = match state.scheduler_log_service.count_logs(&mut ctx).await {
         Ok(count) => count as usize,
         Err(e) => {
             eprintln!("Failed to count logs: {}", e);
@@ -80,7 +92,7 @@ pub async fn get_scheduler_logs(
         }
     };
 
-    let logs = match state.scheduler_log_service.list_logs(length, start).await {
+    let logs = match state.scheduler_log_service.list_logs(&mut ctx, length, start).await {
         Ok(logs) => logs,
         Err(e) => {
             eprintln!("Failed to list logs: {}", e);
@@ -106,7 +118,18 @@ pub async fn get_scheduler_log(
 ) -> impl Responder {
     let id = path.into_inner();
 
-    match state.scheduler_log_service.get_log(id).await {
+    let network = state.node_manager.get_current_network();
+    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
+        Ok(context) => context,
+        Err(e) => {
+            eprintln!("Failed to acquire DB connection: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": format!("Database error: {}", e)
+            }));
+        }
+    };
+
+    match state.scheduler_log_service.get_log(&mut ctx, id).await {
         Ok(log) => HttpResponse::Ok().json(log),
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().json(json!({
             "error": "Log not found"

@@ -5,7 +5,6 @@ pub mod configuration;
 pub mod api;
 pub mod services;
 pub mod repositories;
-pub mod db;
 
 use actix_files as actix_fs;
 use std::net::TcpListener;
@@ -56,10 +55,8 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     let scheduler_log_repo = Arc::new(PostgresSchedulerLogRepository);
 
     // service layer
-    let block_service = Arc::new(BlockService::new(block_repo.clone(), db_pool.clone()));
+    let block_service = Arc::new(BlockService::new(block_repo.clone()));
     let scheduler_log_service = Arc::new(SchedulerLogService::new(
-        db_pool.clone(),
-        block_repo.clone(),
         scheduler_log_repo.clone(),
     ));
     let scheduler_service = Arc::new(SchedulerService::new());

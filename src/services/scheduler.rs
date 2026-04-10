@@ -1,4 +1,3 @@
-use crate::db::Transactional;
 use crate::domain::block::BlockInfo;
 use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
 use crate::repositories::block_repository::BlockRepository;
@@ -11,6 +10,7 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time;
 use uuid::Uuid;
+use crate::services::ExecutionCtx;
 
 #[derive()]
 pub struct SchedulerService {
@@ -70,8 +70,10 @@ impl SchedulerService {
     }
 
     async fn run_sync(state: &AppState, blocks_count: u64) {
-        let mut conn = match state.db_pool.acquire().await {
-            Ok(conn) => conn,
+
+        let network = state.node_manager.get_current_network();
+        let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
+            Ok(context) => context,
             Err(e) => {
                 eprintln!("Failed to acquire DB connection: {}", e);
                 return;
@@ -79,7 +81,7 @@ impl SchedulerService {
         };
 
         let log_id =
-            match state.scheduler_log_service.create_log("On-chain blocks synchronization").await {
+            match state.scheduler_log_service.create_log(&mut ctx, "On-chain blocks synchronization").await {
                 Ok(id) => id,
                 Err(e) => {
                     eprintln!("Failed to create log: {}", e);
@@ -102,24 +104,24 @@ impl SchedulerService {
             Err(e) => {
                 result.error = Some(e.to_string());
                 let _ =
-                    state.scheduler_log_service.update_log_failure(log_id, &e.to_string()).await;
+                    state.scheduler_log_service.update_log_failure(&mut ctx, log_id, &e.to_string()).await;
                 return;
             }
         };
 
         for block in blocks {
-            match state.block_service.find_by_height(block.height).await {
+            match state.block_service.find_by_height(&mut ctx, block.height).await {
                 Ok(_) => {
                     result.skipped += 1;
                     result.skipped_blocks.push(block.hash);
                 }
                 Err(sqlx::Error::RowNotFound) => {
-                    if let Err(e) = state.block_service.save(block.clone()).await {
+                    if let Err(e) = state.block_service.save(&mut ctx, block.clone()).await {
                         eprintln!("Failed to save block {}: {}", block.height, e);
                         result.error = Some(e.to_string());
                         let _ = state
                             .scheduler_log_service
-                            .update_log_failure(log_id, &e.to_string())
+                            .update_log_failure(&mut ctx, log_id, &e.to_string())
                             .await;
                         return;
                     }
@@ -130,7 +132,7 @@ impl SchedulerService {
                     result.error = Some(e.to_string());
                     let _ = state
                         .scheduler_log_service
-                        .update_log_failure(log_id, &e.to_string())
+                        .update_log_failure(&mut ctx, log_id, &e.to_string())
                         .await;
                     return;
                 }
@@ -138,7 +140,7 @@ impl SchedulerService {
         }
 
         if result.error.is_none() {
-            if let Err(e) = state.scheduler_log_service.update_log_success(log_id, &result).await {
+            if let Err(e) = state.scheduler_log_service.update_log_success(&mut ctx, log_id, &result).await {
                 eprintln!("Failed to update log: {}", e);
             } else {
                 println!("Sync completed: saved {}, skipped {}", result.saved, result.skipped);

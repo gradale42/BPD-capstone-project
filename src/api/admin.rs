@@ -3,6 +3,7 @@ use bitcoincore_rpc::{RpcApi};
 use serde_json::json;
 use crate::AppState;
 use crate::services::bitcoin::rpc::{get_blocks_info, import_descriptors, setup_mining_address};
+use crate::services::ExecutionCtx;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MineParams {
@@ -10,6 +11,7 @@ pub struct MineParams {
 }
 
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
+
     // Build wallet client for "student"
     match state.node_manager.get_bitcoin_client("student").lock() {
         Ok(student_client) => {
@@ -90,7 +92,18 @@ pub async fn save_blocks(state: web::Data<AppState>) -> impl Responder {
         }
     };
 
-    match state.block_service.save_blocks_ignore_duplicates(blocks).await {
+    let network = state.node_manager.get_current_network();
+    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
+        Ok(context) => context,
+        Err(e) => {
+            eprintln!("Failed to acquire DB connection: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": format!("Database error: {}", e)
+            }));
+        }
+    };
+
+    match state.block_service.save_blocks_ignore_duplicates(& mut ctx, blocks).await {
         Ok((saved, skipped)) => {
             HttpResponse::Ok().json(json!({
                 "status": "success",
