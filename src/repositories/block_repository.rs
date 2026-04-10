@@ -1,3 +1,4 @@
+use crate::configuration::Network;
 use crate::domain::block::{BlockInfo, TimeseriesPoint};
 use async_trait::async_trait;
 use sqlx::{Error, PgConnection, PgPool};
@@ -5,20 +6,29 @@ use uuid::{uuid, Uuid};
 
 #[async_trait]
 pub trait BlockRepository: Send + Sync {
+    
     async fn find_by_height(
-        &self, conn: &mut PgConnection, height: i64,
+        &self, conn: &mut PgConnection, network: Network, height: i64,
     ) -> Result<BlockInfo, Error>;
-    async fn find_by_hash(&self, conn: &mut PgConnection, hash: &str) -> Result<BlockInfo, Error>;
-    async fn save(&self, conn: &mut PgConnection, user: BlockInfo) -> Result<(), Error>;
+    
+    async fn find_by_hash(
+        &self, conn: &mut PgConnection, network: Network, hash: &str,
+    ) -> Result<BlockInfo, Error>;
+    
+    async fn save(
+        &self, conn: &mut PgConnection, network: Network, user: BlockInfo,
+    ) -> Result<(), Error>;
+    
     async fn list_blocks(
-        &self, conn: &mut PgConnection, limit: i64, offset: i64, order_by: &str,
+        &self, conn: &mut PgConnection, network: Network, limit: i64, offset: i64, order_by: &str,
     ) -> Result<Vec<BlockInfo>, Error>;
-    async fn count_blocks(&self, conn: &mut PgConnection) -> Result<i64, Error>;
+    
+    async fn count_blocks(
+        &self, conn: &mut PgConnection, network: Network
+    ) -> Result<i64, Error>;
+    
     async fn get_timeseries(
-        &self,
-        conn: &mut PgConnection,
-        from: i64,
-        to: i64,
+        &self, conn: &mut PgConnection, from: i64, to: i64,
     ) -> Result<Vec<TimeseriesPoint>, Error>;
 }
 
@@ -27,20 +37,24 @@ pub struct PostgresBlockRepository;
 #[async_trait]
 impl BlockRepository for PostgresBlockRepository {
     async fn find_by_height(
-        &self, conn: &mut PgConnection, height: i64,
+        &self, conn: &mut PgConnection, network: Network, height: i64,
     ) -> Result<BlockInfo, Error> {
         sqlx::query_as!(BlockInfo, r#"SELECT * FROM block_info WHERE height = $1"#, height)
             .fetch_one(conn)
             .await
     }
 
-    async fn find_by_hash(&self, conn: &mut PgConnection, hash: &str) -> Result<BlockInfo, Error> {
+    async fn find_by_hash(
+        &self, conn: &mut PgConnection, network: Network, hash: &str,
+    ) -> Result<BlockInfo, Error> {
         sqlx::query_as!(BlockInfo, r#"SELECT * FROM block_info WHERE hash = $1"#, hash)
             .fetch_one(conn)
             .await
     }
 
-    async fn save(&self, conn: &mut PgConnection, block: BlockInfo) -> Result<(), Error> {
+    async fn save(
+        &self, conn: &mut PgConnection, network: Network, block: BlockInfo,
+    ) -> Result<(), Error> {
         sqlx::query!(
             r#"INSERT INTO block_info (
                 height,
@@ -74,7 +88,7 @@ impl BlockRepository for PostgresBlockRepository {
     }
 
     async fn list_blocks(
-        &self, conn: &mut PgConnection, limit: i64, offset: i64, order_by: &str,
+        &self, conn: &mut PgConnection, network: Network, limit: i64, offset: i64, order_by: &str,
     ) -> Result<Vec<BlockInfo>, Error> {
         // white list for SQL injection protection
         let order_clause = match order_by {
@@ -103,16 +117,13 @@ impl BlockRepository for PostgresBlockRepository {
         Ok(rows)
     }
 
-    async fn count_blocks(&self, conn: &mut PgConnection) -> Result<i64, Error> {
+    async fn count_blocks(&self, conn: &mut PgConnection, network: Network) -> Result<i64, Error> {
         let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM block_info").fetch_one(conn).await?;
         Ok(row.0)
     }
 
     async fn get_timeseries(
-        &self,
-        conn: &mut PgConnection,
-        from: i64,
-        to: i64,
+        &self, conn: &mut PgConnection, from: i64, to: i64,
     ) -> Result<Vec<TimeseriesPoint>, Error> {
         sqlx::query_as!(
             TimeseriesPoint,
@@ -125,7 +136,7 @@ impl BlockRepository for PostgresBlockRepository {
             from,
             to
         )
-            .fetch_all(conn)
-            .await
+        .fetch_all(conn)
+        .await
     }
 }
