@@ -28,18 +28,11 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
-pub async fn get_mock_mempool(web::Query(_params): web::Query<serde_json::Value>) -> impl Responder {
-    match fs::read_to_string("resources/mempool_history.json") {
-        Ok(content) => HttpResponse::Ok().json(json!(content)),
-        Err(e) => HttpResponse::InternalServerError().body(format!("Error reading file: {}", e)),
-    }
-}
-
 pub async fn get_mempool(
     state: web::Data<AppState>,
     web::Query(params): web::Query<MempoolParams>,
 ) -> impl Responder {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
             let mempool_info = match client.get_mempool_info() {
                 Ok(info) => info,

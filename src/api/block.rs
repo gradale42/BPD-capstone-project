@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 use std::fs;
 use crate::AppState;
 use bitcoincore_rpc::bitcoin::Witness;
+use crate::api::execute_rpc;
 
 pub async fn get_block_by_hash(
     state: web::Data<AppState>,
@@ -11,7 +12,7 @@ pub async fn get_block_by_hash(
 ) -> impl Responder {
     let hash_str = block_hash.into_inner();
 
-    state.execute_rpc("", move |client| {
+    execute_rpc(&state.node_manager, "", move |client| {
 
         let hash = hash_str.parse().expect("invalid hash");
 
@@ -23,7 +24,7 @@ pub async fn get_block_by_hash(
             .map(|tx| {
                 let mut tx_obj = serde_json::Map::new();
 
-                tx_obj.insert("txid".to_string(), json!(tx.txid().to_string()));
+                tx_obj.insert("txid".to_string(), json!(tx.compute_txid().to_string()));
                 tx_obj.insert("version".to_string(), json!(tx.version));
                 tx_obj.insert("lock_time".to_string(), json!(tx.lock_time));
                 tx_obj.insert("size".to_string(), json!(tx.total_size()));
@@ -86,7 +87,7 @@ pub async fn get_block_by_hash1(
     state: web::Data<AppState>,
     block_hash: web::Path<String>,
 ) -> impl Responder {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
 
             let hash = match block_hash.parse() {
@@ -109,7 +110,7 @@ pub async fn get_block_by_hash1(
                                 .map(|tx| {
                                     let mut tx_obj = serde_json::Map::new();
 
-                                    tx_obj.insert("txid".to_string(), json!(tx.txid().to_string()));
+                                    tx_obj.insert("txid".to_string(), json!(tx.compute_txid().to_string()));
                                     tx_obj.insert("version".to_string(), json!(tx.version));
                                     tx_obj.insert("lock_time".to_string(), json!(tx.lock_time));
                                     tx_obj.insert("size".to_string(), json!(tx.total_size()));

@@ -32,18 +32,11 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
-pub async fn get_mock_peers(web::Query(_params): web::Query<serde_json::Value>) -> impl Responder {
-    match fs::read_to_string("resources/peers.json") {
-        Ok(content) => HttpResponse::Ok().json(json!(content)),
-        Err(e) => HttpResponse::InternalServerError().body(format!("Error reading file: {}", e)),
-    }
-}
-
 pub async fn get_peers(
     state: web::Data<AppState>,
     web::Query(params): web::Query<PeersParams>,
 ) -> impl Responder {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
             
             let peers_raw = match client.get_peer_info() {

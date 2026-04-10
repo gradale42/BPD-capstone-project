@@ -2,6 +2,7 @@ use actix_web::{get, web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
+use crate::api::execute_rpc;
 use crate::AppState;
 
 #[derive(Debug, serde::Serialize)]
@@ -12,15 +13,8 @@ pub struct DashboardStats {
     pub hashrate: f64,
 }
 
-pub async fn get_mock_stats() -> impl Responder {
-    match fs::read_to_string("resources/stats.json") {
-        Ok(content) => HttpResponse::Ok().json(json!(content)),
-        Err(e) => HttpResponse::InternalServerError().body(format!("Error reading file: {}", e)),
-    }
-}
-
 pub async fn get_stats(state: web::Data<AppState>) -> impl Responder {
-    state.execute_rpc("", |client| {
+    execute_rpc(&state.node_manager,"", |client| {
         let blockchain_info = client.get_blockchain_info()?;
         let mempool_info = client.get_mempool_info()?;
         let peers = client.get_peer_info()?;

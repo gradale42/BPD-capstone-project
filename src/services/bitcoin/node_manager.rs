@@ -99,6 +99,7 @@ impl BitcoinNodeManager {
             Err(e) => Err(format!("Thread pool error: {}", e)),
         }
     }
+
 }
 
 impl BitcoinNodeManager {

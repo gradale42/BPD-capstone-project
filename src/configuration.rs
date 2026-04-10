@@ -49,6 +49,13 @@ pub enum Network {
     Mainnet,
 }
 
+pub const ALL_BITCOIN_NETWORKS: [Network; 4] = [
+    Network::Regtest,
+    Network::Signet,
+    Network::Testnet,
+    Network::Mainnet,
+];
+
 impl Network {
     pub fn rpc_port(&self) -> u16 {
         match self {
@@ -121,18 +128,4 @@ impl BitcoinSettings {
             config
         }
     }
-}
-
-pub fn config_mock(cfg: &mut web::ServiceConfig) {
-    println!("⚙️  Configuring MOCK API routes...");
-
-    cfg.service(
-        web::scope("/api/mock")
-            .route("/stats", web::get().to(stats::get_mock_stats))
-            .route("/blocks", web::get().to(blocks::get_mock_blocks))
-            .route("/mempool", web::get().to(mempool::get_mock_mempool))
-            .route("/peers", web::get().to(peers::get_mock_peers))
-    );
-
-    println!("✅ MOCK API routes configured");
 }

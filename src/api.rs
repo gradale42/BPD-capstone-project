@@ -10,25 +10,11 @@ pub mod indexer;
 pub mod live;
 pub mod network;
 
-use actix_web::web;
+use actix_web::{web, HttpResponse};
+use serde_json::json;
+use crate::services::bitcoin::node_manager::BitcoinNodeManager;
 
-pub fn config_mock(cfg: &mut web::ServiceConfig) {
-    println!("⚙️  Configuring MOCK API routes...");
-
-    cfg.service(
-        web::scope("/api/mock")
-            .route("/stats", web::get().to(stats::get_mock_stats))
-            .route("/blocks", web::get().to(blocks::get_mock_blocks))
-            .route("/mempool", web::get().to(mempool::get_mock_mempool))
-            .route("/peers", web::get().to(peers::get_mock_peers))
-    );
-
-    println!("✅ MOCK API routes configured");
-}
-
-pub fn config_real(
-    cfg: &mut web::ServiceConfig
-) {
+pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
             .route("/network/switch", web::post().to(network::switch_network))
@@ -56,15 +42,19 @@ pub fn config_real(
     );
 }
 
-pub fn config(cfg: &mut web::ServiceConfig) {
-    config_real(cfg);
-    /*
-    config_mock(cfg);
-
-    if let Some((rpc, url, auth)) = rpc_client {
-        config_real(cfg, appState);
-    } else {
-        println!("⚠️  No RPC client available, real endpoints disabled");
+pub async fn execute_rpc<F, R>(node_manager: &BitcoinNodeManager, wallet_name: &str, f: F) -> HttpResponse
+where
+    F: FnOnce(&bitcoincore_rpc::Client) -> Result<R, bitcoincore_rpc::Error> + Send + 'static,
+    R: serde::Serialize + Send + 'static,
+{
+    match node_manager.execute_rpc(wallet_name, f).await {
+        Ok(data) => HttpResponse::Ok().json(json!({
+                "status": "success",
+                "data": data
+            })),
+        Err(err) => HttpResponse::InternalServerError().json(json!({
+                "status": "error",
+                "message": err
+            })),
     }
-    */
 }

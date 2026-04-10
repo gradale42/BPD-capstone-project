@@ -150,7 +150,7 @@ pub async fn get_blocks_info(
     state: &AppState,
     length: Option<u64>,
 ) -> Result<Vec<BlockInfo>, std::io::Error> {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
 
             let blockchain_info = match client.get_blockchain_info() {
@@ -229,7 +229,7 @@ pub async fn get_blocks_info(
 }
 
 pub async fn get_last_block_height(state: &AppState) -> Result<i64, String> {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
             let info = client.get_blockchain_info().map_err(|e| e.to_string())?;
             Ok(info.blocks as i64)
@@ -239,7 +239,7 @@ pub async fn get_last_block_height(state: &AppState) -> Result<i64, String> {
 }
 
 pub async fn get_mempool_tx_count(state: &AppState) -> Result<usize, String> {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
             let txids = client.get_raw_mempool().map_err(|e| e.to_string())?;
             Ok(txids.len())
@@ -249,7 +249,7 @@ pub async fn get_mempool_tx_count(state: &AppState) -> Result<usize, String> {
 }
 
 pub async fn get_peer_count(state: &AppState) -> Result<usize, String> {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
             let peers = client.get_peer_info().map_err(|e| e.to_string())?;
             Ok(peers.len())
@@ -259,7 +259,7 @@ pub async fn get_peer_count(state: &AppState) -> Result<usize, String> {
 }
 
 pub async fn get_network_hashrate(state: &AppState) -> Result<f64, String> {
-    match state.get_default_bitcoin_client().lock() {
+    match state.node_manager.get_default_bitcoin_client().lock() {
         Ok(client) => {
             let hashrate = client.get_network_hash_ps(None, None).map_err(|e| e.to_string())?;
             Ok(hashrate as f64 / 1e18) // EH/s

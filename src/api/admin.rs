@@ -11,7 +11,7 @@ pub struct MineParams {
 
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
     // Build wallet client for "student"
-    match state.get_bitcoin_client("student").lock() {
+    match state.node_manager.get_bitcoin_client("student").lock() {
         Ok(student_client) => {
             match import_descriptors(&student_client) {
                 Ok(_) => HttpResponse::Ok().json(json!({
@@ -40,7 +40,7 @@ pub async fn mine_blocks_handler(state: web::Data<AppState>, query: web::Query<M
         }));
     }
 
-    match state.get_bitcoin_client("miner_wallet").lock() {
+    match state.node_manager.get_bitcoin_client("miner_wallet").lock() {
         Ok(mining_client) => {
             match setup_mining_address(&mining_client) {
                 Ok(mining_address) => {
