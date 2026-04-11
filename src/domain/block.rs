@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use crate::configuration::Network;
 
 #[derive(Debug, Deserialize)]
 pub struct BlocksParams {
@@ -13,6 +14,7 @@ pub struct BlocksParams {
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct BlockInfo {
+    pub network: Network,
     pub height: i64,
     pub hash: String,
     pub time: i64,        // Unix timestamp from RPC
@@ -39,7 +41,7 @@ pub struct TimeRange {
     pub to: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct TimeseriesPoint {
     pub time: i64,           // Unix timestamp (seconds)
     pub tx_count: i32,

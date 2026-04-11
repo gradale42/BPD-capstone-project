@@ -5,12 +5,12 @@ use std::sync::{Arc, Mutex};
 use crate::configuration::{Network, BitcoinNodeConfig};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NodeKey {
+pub struct ClientKey {
     pub network: Network,
     pub wallet_name: String,
 }
 
-impl NodeKey {
+impl ClientKey {
     pub fn new(network: Network, wallet_name: String) -> Self {
         Self { network, wallet_name }
     }
@@ -21,7 +21,7 @@ impl NodeKey {
 }
 
 pub struct BitcoinNodeManager {
-    clients: DashMap<NodeKey, Arc<Mutex<Client>>>,
+    clients: DashMap<ClientKey, Arc<Mutex<Client>>>,
     network_configs: HashMap<Network, BitcoinNodeConfig>,
     current_network: Arc<Mutex<Network>>,
 }
@@ -46,7 +46,7 @@ impl BitcoinNodeManager {
     }
 
     pub fn get_client(&self, network: Network, wallet_name: &str) -> Arc<Mutex<Client>> {
-        let key = NodeKey::new(network, wallet_name.to_string());
+        let key = ClientKey::new(network, wallet_name.to_string());
 
         self.clients.entry(key.clone()).or_insert_with(|| {
             println!("=== Creating Bitcoin client for network: {}, wallet: {} ===",

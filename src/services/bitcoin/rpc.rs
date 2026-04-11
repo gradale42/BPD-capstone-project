@@ -202,6 +202,7 @@ pub async fn get_blocks_info(
                 let total_fees_sats = block_stats.total_fee.to_sat() as f64;
 
                 blocks.push(BlockInfo {
+                    network: state.node_manager.get_current_network(),
                     height: height as i64,
                     hash: block_hash.to_string(),
                     time: block.header.time as i64,

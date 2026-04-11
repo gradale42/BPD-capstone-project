@@ -1,12 +1,14 @@
 use crate::api::{blocks, mempool, peers, stats};
 use actix_web::web;
+use sqlx::{Decode, Encode, FromRow};
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub bitcoin: BitcoinSettings,
-    pub application_port: u16
+    pub application_port: u16,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
@@ -34,14 +36,13 @@ impl DatabaseSettings {
     }
 
     pub fn connection_string_without_db(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}",
-            self.username, self.password, self.host, self.port
-        )
+        format!("postgres://{}:{}@{}:{}", self.username, self.password, self.host, self.port)
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "bitcoin_network", rename_all = "lowercase")]
 pub enum Network {
     Regtest,
     Signet,
@@ -49,12 +50,8 @@ pub enum Network {
     Mainnet,
 }
 
-pub const ALL_BITCOIN_NETWORKS: [Network; 4] = [
-    Network::Regtest,
-    Network::Signet,
-    Network::Testnet,
-    Network::Mainnet,
-];
+pub const ALL_BITCOIN_NETWORKS: [Network; 4] =
+    [Network::Regtest, Network::Signet, Network::Testnet, Network::Mainnet];
 
 impl Network {
     pub fn rpc_port(&self) -> u16 {
