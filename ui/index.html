@@ -83,16 +83,25 @@
             <div class="tile-icon"><i class="fas fa-cubes"></i></div>
             <div class="tile-content">
                 <div class="tile-label">Last block</div>
-                <div class="tile-value" id="last-block">--</div>
+                <div class="tile-value">
+                    <span style="color: #f7931a;">Live: <span id="last-block-live">--</span></span><br>
+                    <span style="color: #666;">Index: <span id="last-block-index">--</span></span>
+                    <span id="last-block-indicator" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #888; margin-left: 8px;"></span>
+                </div>
             </div>
         </div>
 
-        <!-- Mempool Transaction Count Tile -->
-        <div class="tile">
+        <!-- Mempool Stats Tile -->
+        <div class="tile" id="mempool-stats-tile">
             <div class="tile-icon"><i class="fas fa-memory"></i></div>
             <div class="tile-content">
-                <div class="tile-label">Mempool TX</div>
-                <div class="tile-value" id="mempool-count">--</div>
+                <div class="tile-label">Mempool</div>
+                <div class="tile-value">
+                    <span style="color: #f7931a;">TX: <span id="mempool-tx-count">--</span></span>
+                    <span id="mempool-status-indicator" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #888; margin-left: 8px;"></span><br>
+                    <span style="color: #666;">Size: <span id="mempool-vbytes">--</span> vB</span><br>
+                    <span style="color: #666;">Fees: <span id="mempool-fees">--</span> BTC</span>
+                </div>
             </div>
         </div>
 
@@ -157,16 +166,20 @@
 
         <!-- Mempool Tab -->
         <div class="tab-pane" id="tab-mempool">
-            <h2><i class="fas fa-memory"></i> Mempool History</h2>
+            <h2><i class="fas fa-memory"></i>Mempool</h2>
             <table id="mempool-table" class="display responsive nowrap" style="width:100%">
                 <thead>
                 <tr>
+                    <th>TXID</th>
+                    <th>vSize (vB)</th>
+                    <th>Weight</th>
                     <th>Time</th>
-                    <th>TX Count</th>
-                    <th>vBytes</th>
-                    <th>Total Fees</th>
-                    <th>Min Relay Fee</th>
-                </tr>
+                    <th>Height</th>
+                    <th>Fee (BTC)</th>
+                    <th>Fee Rate (sat/vB)</th>
+                    <th>Ancestors</th>
+                    <th>Descendants</th>
+                    <th>RBF</th>
                 </thead>
             </table>
         </div>
@@ -384,15 +397,6 @@
                     <button class="metric-btn active" data-metric="tx_count">Transactions</button>
                     <button class="metric-btn" data-metric="avg_fee_sat">Avg Fee (sat)</button>
                     <button class="metric-btn" data-metric="avg_feerate">Fee Rate (sat/vB)</button>
-                </div>
-
-                <!-- Status Bar for Blockchain Data -->
-                <div class="status-bar blockchain-status">
-                    <div class="status-indicator">
-                        <div class="status-led"></div>
-                        <span id="blockchain-status-text">Connected</span>
-                    </div>
-                    <div id="blockchain-data-points">—</div>
                 </div>
 
                 <div id="blockchain-chart" class="blockchain-chart-container"></div>

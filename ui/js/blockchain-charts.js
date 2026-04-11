@@ -3,25 +3,16 @@ let currentMetric = 'tx_count';
 let currentData = [];
 
 async function fetchBlockchainData(fromTimestamp, toTimestamp) {
-    const statusSpan = document.getElementById('blockchain-status-text');
-    const pointsSpan = document.getElementById('blockchain-data-points');
-
-    statusSpan.innerText = 'Loading...';
-    pointsSpan.innerText = '⏳ fetching';
-
+    // Удалите строки со статусом
     const url = `/api/blocks/timeseries?from=${Math.floor(fromTimestamp / 1000)}&to=${Math.floor(toTimestamp / 1000)}`;
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         currentData = data;
-        statusSpan.innerText = 'Connected';
-        pointsSpan.innerText = `📊 ${data.length} points`;
         return data;
     } catch (err) {
         console.error('Failed to fetch blockchain timeseries:', err);
-        statusSpan.innerText = 'Error';
-        pointsSpan.innerText = '⚠️ failed';
         return [];
     }
 }
@@ -42,7 +33,6 @@ function renderBlockchainChart() {
     };
 
     blockchainChart.setOption({
-        //backgroundColor: '#1e1e2f',
         tooltip: {
             trigger: 'axis',
             valueFormatter: (value) => value?.toLocaleString() ?? 'N/A'

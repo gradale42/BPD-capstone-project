@@ -9,6 +9,7 @@ pub mod scheduler;
 pub mod indexer;
 pub mod live;
 pub mod network;
+pub mod mempool_txs;
 
 use actix_web::{web, HttpResponse};
 use serde_json::json;
@@ -27,6 +28,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/blocks", web::get().to(blocks::get_blocks))
             .route("/blocks/timeseries", web::get().to(blocks::get_block_timeseries))
             .route("/mempool", web::get().to(mempool::get_mempool))
+            .route("/mempool/transactions", web::get().to(mempool_txs::get_mempool_transactions))
+            .route("/transaction/{txid}", web::get().to(mempool_txs::get_transaction_details))
+            .route("/mempool/stats", web::get().to(mempool_txs::get_mempool_stats))
             .route("/peers", web::get().to(peers::get_peers))
             .route("/admin/import-descriptors", web::post().to(admin::import_descriptors_handler))
             .route("/admin/mine-blocks", web::post().to(admin::mine_blocks_handler))

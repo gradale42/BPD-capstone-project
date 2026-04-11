@@ -197,6 +197,8 @@ async function updateLiveTiles() {
         document.getElementById('mempool-count').textContent = data.mempool_count?.toLocaleString() || '--';
         document.getElementById('peer-count').textContent = data.peer_count || '--';
         document.getElementById('hashrate').textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
+
+        await updateMempoolStats();
     } catch (error) {
         console.error('Error updating live tiles:', error);
     }
@@ -263,35 +265,31 @@ async function fetchIndexerStats() {
         const lastBlockLive = data.last_block_live !== undefined ? data.last_block_live : '--';
         const lastBlockIndex = data.last_block_index !== undefined ? data.last_block_index : '--';
         const isEqual = (lastBlockLive === lastBlockIndex) && lastBlockLive !== '--';
-        const indicatorColor = isEqual ? 'green' : 'red';
+        const indicatorColor = isEqual ? '#4caf50' : '#f44336';
 
-        // Update the Last block tile content
-        const tile = document.getElementById('last-block-tile');
-        if (tile) {
-            tile.innerHTML = `
-                <div class="tile-icon"><i class="fas fa-cubes"></i></div>
-                <div class="tile-content">
-                    <div class="tile-label">Last block</div>
-                    <div class="tile-value">
-                        <span style="color: #f7931a;">Live: ${lastBlockLive}</span><br>
-                        <span style="color: #666;">Index: ${lastBlockIndex}</span>
-                        <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: ${indicatorColor}; margin-left: 8px;"></span>
-                    </div>
-                </div>
-            `;
-        }
+        // Обновляем только значения, не трогая структуру
+        const liveSpan = document.getElementById('last-block-live');
+        const indexSpan = document.getElementById('last-block-index');
+        const indicatorSpan = document.getElementById('last-block-indicator');
+
+        if (liveSpan) liveSpan.textContent = lastBlockLive;
+        if (indexSpan) indexSpan.textContent = lastBlockIndex;
+        if (indicatorSpan) indicatorSpan.style.backgroundColor = indicatorColor;
     } catch (error) {
         console.error('Error fetching indexer stats:', error);
-        const tile = document.getElementById('last-block-tile');
-        if (tile) {
-            tile.innerHTML = `
-                <div class="tile-icon"><i class="fas fa-cubes"></i></div>
-                <div class="tile-content">
-                    <div class="tile-label">Last block</div>
-                    <div class="tile-value">Error</div>
-                </div>
-            `;
-        }
+    }
+}
+
+async function updateMempoolStats() {
+    try {
+        const response = await fetch('/api/mempool/stats');
+        const data = await response.json();
+
+        document.getElementById('mempool-tx-count').textContent = data.tx_count?.toLocaleString() || '--';
+        document.getElementById('mempool-vbytes').textContent = data.vbytes ? `${data.vbytes.toLocaleString()} vB` : '-- vB';
+        document.getElementById('mempool-fees').textContent = data.total_fees ? `${data.total_fees.toFixed(8)} BTC` : '-- BTC';
+    } catch (error) {
+        console.error('Error updating mempool stats:', error);
     }
 }
 
@@ -310,3 +308,78 @@ fetchIndexerStats();
 // Set up periodic updates
 setInterval(fetchLiveStats, 10000);
 setInterval(fetchIndexerStats, 10000);
+
+
+$(document).on('click', '.tx-link', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const txid = $(this).data('txid');
+    console.log(`Opening transaction details: ${txid}`);
+    showTransactionDetails(txid);
+});
+
+// Function to show transaction details modal
+async function showTransactionDetails(txid) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('tx-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'tx-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-exchange-alt"></i> Transaction Details</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="tx-info">
+                        <div class="info-row">
+                            <span class="info-label">TXID:</span>
+                            <span id="tx-txid" class="info-value hash-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Time:</span>
+                            <span id="tx-time" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Height:</span>
+                            <span id="tx-height" class="info-value"></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Fee Rate:</span>
+                            <span id="tx-fee-rate" class="info-value"></span>
+                        </div>
+                    </div>
+                    <div class="json-viewer-container">
+                        <pre id="tx-json" style="max-height: 400px; overflow: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Add close functionality
+        const closeBtn = modal.querySelector('.close');
+        closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (event) => {
+            if (event.target === modal) modal.style.display = 'none';
+        };
+    }
+
+    modal.style.display = 'block';
+
+    try {
+        const response = await fetch(`/api/transaction/${txid}`);
+        const data = await response.json();
+
+        document.getElementById('tx-txid').textContent = txid;
+        document.getElementById('tx-time').textContent = data.time ? new Date(data.time * 1000).toLocaleString() : 'Unknown';
+        document.getElementById('tx-height').textContent = data.height || 'Mempool';
+        document.getElementById('tx-fee-rate').textContent = data.fee_rate ? `${data.fee_rate.toFixed(2)} sat/vB` : 'Unknown';
+        document.getElementById('tx-json').textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+        console.error('Error loading transaction details:', error);
+        document.getElementById('tx-json').textContent = `Error loading transaction: ${error.message}`;
+    }
+}

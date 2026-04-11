@@ -30,4 +30,4 @@ bitcoin:
       rpc_user: "alice"
       rpc_password: "password"
 
-application_port: 8080
+application_port: 3000
