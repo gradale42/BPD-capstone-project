@@ -99,8 +99,8 @@
                 <div class="tile-value">
                     <span style="color: #f7931a;">TX: <span id="mempool-tx-count">--</span></span>
                     <span id="mempool-status-indicator" style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background-color: #888; margin-left: 8px;"></span><br>
-                    <span style="color: #666;">Size: <span id="mempool-vbytes">--</span> vB</span><br>
-                    <span style="color: #666;">Fees: <span id="mempool-fees">--</span> BTC</span>
+                    <span style="color: #666;">Size: <span id="mempool-vbytes">--</span></span><br>
+                    <span style="color: #666;">Fees: <span id="mempool-fees">--</span></span>
                 </div>
             </div>
         </div>
@@ -400,6 +400,23 @@
                 </div>
 
                 <div id="blockchain-chart" class="blockchain-chart-container"></div>
+            </div>
+
+            <!-- Mempool Metrics Section -->
+            <div class="mempool-metrics-section" style="margin-top: 40px;">
+                <div class="analytics-header">
+                    <h3><i class="fas fa-memory"></i> Mempool Metrics</h3>
+                    <div class="date-range-container" id="mempool-daterange-container">
+                        <div id="mempool-daterange">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+                <div id="mempool-metrics-chart" style="height: 400px; width: 100%;">
+                    <canvas id="mempoolMetricsChart"></canvas>
+                </div>
             </div>
 
             <!-- Network Charts Section -->

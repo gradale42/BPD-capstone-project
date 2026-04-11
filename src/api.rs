@@ -10,6 +10,7 @@ pub mod indexer;
 pub mod live;
 pub mod network;
 pub mod mempool_txs;
+mod mempool_metrics;
 
 use actix_web::{web, HttpResponse};
 use serde_json::json;

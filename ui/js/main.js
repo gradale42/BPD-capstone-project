@@ -173,6 +173,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         });
+
+        const chartsTabButton = document.querySelector('[data-tab="charts"]');
+        if (chartsTabButton) {
+            chartsTabButton.addEventListener('click', async function() {
+                setTimeout(async () => {
+                    if (typeof window.initMempoolMetricsChart === 'function') {
+                        await window.initMempoolMetricsChart();
+
+                        // Initialize date range picker for mempool metrics
+                        const mempoolPicker = new DateRangePeeker('mempool-daterange', async (start, end) => {
+                            if (typeof window.refreshMempoolMetricsChart === 'function') {
+                                await window.refreshMempoolMetricsChart(start, end);
+                            }
+                        });
+
+                        // Initial load with default range
+                        const range = mempoolPicker.getCurrentRange();
+                        await window.refreshMempoolMetricsChart(range.startDate, range.endDate);
+                    }
+                }, 100);
+            });
+        }
     });
 
     // Initialize other components

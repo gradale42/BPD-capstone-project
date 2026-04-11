@@ -198,3 +198,141 @@ async function updateCharts() {
         // Add your chart initialization code here
     }
 }
+
+
+let mempoolMetricsChart = null;
+
+async function initMempoolMetricsChart() {
+    const ctx = document.getElementById('mempoolMetricsChart');
+    if (!ctx) return;
+
+    mempoolMetricsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'TX Count',
+                    data: [],
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    yAxisID: 'y',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'vBytes (MB)',
+                    data: [],
+                    borderColor: '#7c3aed',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    yAxisID: 'y1',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Avg Fee Rate (sat/vB)',
+                    data: [],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    yAxisID: 'y2',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Mempool Metrics Over Time'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            let value = context.raw;
+                            if (context.dataset.label === 'vBytes (MB)') {
+                                value = (value / 1024 / 1024).toFixed(2);
+                                return `${label}: ${value} MB`;
+                            }
+                            return `${label}: ${value.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Transaction Count'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'vBytes (MB)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                },
+                y2: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Fee Rate (sat/vB)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    position: 'right',
+                    offset: true
+                }
+            }
+        }
+    });
+}
+
+async function refreshMempoolMetricsChart(startDate, endDate) {
+    if (!mempoolMetricsChart) return;
+
+    try {
+        const from = Math.floor(startDate.valueOf() / 1000);
+        const to = Math.floor(endDate.valueOf() / 1000);
+        const response = await fetch(`/api/mempool/timeseries?from=${from}&to=${to}`);
+        const data = await response.json();
+
+        if (data && data.length) {
+            const labels = data.map(item => new Date(item.time * 1000));
+            const txCounts = data.map(item => item.tx_count);
+            const vbytes = data.map(item => item.vbytes);
+            const avgFeerates = data.map(item => item.avg_feerate || 0);
+
+            mempoolMetricsChart.data.labels = labels;
+            mempoolMetricsChart.data.datasets[0].data = txCounts;
+            mempoolMetricsChart.data.datasets[1].data = vbytes;
+            mempoolMetricsChart.data.datasets[2].data = avgFeerates;
+            mempoolMetricsChart.update();
+        }
+    } catch (error) {
+        console.error('Error fetching mempool timeseries:', error);
+    }
+}
+
+
+window.initMempoolMetricsChart = initMempoolMetricsChart;
+window.refreshMempoolMetricsChart = refreshMempoolMetricsChart;

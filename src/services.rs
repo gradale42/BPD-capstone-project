@@ -6,6 +6,7 @@ pub mod bitcoin;
 pub mod block_service;
 pub mod scheduler;
 pub mod scheduler_log_service;
+pub mod mempool_metrics_service;
 
 pub struct ExecutionCtx {
     pub conn: sqlx::pool::PoolConnection<sqlx::Postgres>,

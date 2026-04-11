@@ -26,6 +26,8 @@ use crate::repositories::{
     BlockRepository, PostgresBlockRepository,
     SchedulerLogRepository, PostgresSchedulerLogRepository,
 };
+use crate::repositories::mempool_metrics_repository::PostgresMempoolMetricsRepository;
+use crate::services::mempool_metrics_service::MempoolMetricsService;
 use crate::services::scheduler::SchedulerService;
 
 pub struct AppState {
@@ -34,6 +36,7 @@ pub struct AppState {
     pub block_service: Arc<BlockService>,
     pub scheduler_log_service: Arc<SchedulerLogService>,
     pub scheduler_service : Arc<SchedulerService>,
+    pub mempool_metrics_service: Arc<MempoolMetricsService>,
 }
 
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
@@ -53,6 +56,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     // repo layer
     let block_repo = Arc::new(PostgresBlockRepository);
     let scheduler_log_repo = Arc::new(PostgresSchedulerLogRepository);
+    let mempool_metrics_repo = Arc::new(PostgresMempoolMetricsRepository);
 
     // service layer
     let block_service = Arc::new(BlockService::new(block_repo.clone()));
@@ -60,13 +64,17 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         scheduler_log_repo.clone(),
     ));
     let scheduler_service = Arc::new(SchedulerService::new());
+    let mempool_metrics_service = Arc::new(MempoolMetricsService::new(
+        mempool_metrics_repo.clone()
+    ));
 
     let app_state = web::Data::new(AppState {
         node_manager: node_manager.clone(),
         db_pool,
         block_service,
         scheduler_log_service,
-        scheduler_service
+        scheduler_service,
+        mempool_metrics_service
     });
 
     println!("\n================================================");

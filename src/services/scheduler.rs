@@ -40,8 +40,9 @@ impl SchedulerService {
 
             while *is_running_clone.lock().await {
                 interval.tick().await;
-                println!("Running scheduled blocks synchronization...");
+                println!("Running scheduled blockchain synchronization...");
                 Self::run_sync(&state_clone , blocks_count).await;
+                Self::run_mempool_sync(&state_clone ).await;
             }
         });
 
@@ -70,6 +71,8 @@ impl SchedulerService {
     }
 
     async fn run_sync(state: &AppState, blocks_count: u64) {
+
+        println!("Saving blocks...");
 
         let network = state.node_manager.get_current_network();
         let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
@@ -145,6 +148,77 @@ impl SchedulerService {
             } else {
                 println!("Sync completed: saved {}, skipped {}", result.saved, result.skipped);
             }
+        }
+    }
+
+    async fn run_mempool_sync(state: &AppState) {
+
+        println!("Saving mempool...");
+
+        let network = state.node_manager.get_current_network();
+        let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
+            Ok(context) => context,
+            Err(e) => {
+                eprintln!("Failed to acquire DB connection for mempool sync: {}", e);
+                return;
+            }
+        };
+
+        // Fetch current mempool stats via RPC
+        let mempool_info = match state.node_manager.get_current_client().get_mempool_info() {
+            Ok(info) => info,
+            Err(e) => {
+                eprintln!("Failed to get mempool info: {}", e);
+                return;
+            }
+        };
+
+        // Calculate fee rate statistics
+        let mempool_tx_ids = match state.node_manager.get_rpc_client().get_raw_mempool() {
+            Ok(tx_ids) => tx_ids,
+            Err(e) => {
+                eprintln!("Failed to get mempool transactions: {}", e);
+                return;
+            }
+        };
+
+        let mut total_feerate = 0.0;
+        let mut min_feerate = f64::MAX;
+        let mut max_feerate = f64::MIN;
+        let mut count = 0;
+
+        // Sample first 1000 transactions for performance
+        let sample_size = std::cmp::min(1000, mempool_tx_ids.len());
+        for txid in mempool_tx_ids.iter().take(sample_size) {
+            if let Ok(tx) = state.node_manager.get_rpc_client().get_raw_transaction_info(txid, None) {
+                let vsize = tx.vsize as f64;
+                if vsize > 0.0 {
+                    let fee_rate = (tx.fee as f64) / vsize;
+                    total_feerate += fee_rate;
+                    count += 1;
+                    if fee_rate < min_feerate { min_feerate = fee_rate; }
+                    if fee_rate > max_feerate { max_feerate = fee_rate; }
+                }
+            }
+        }
+
+        let avg_feerate = if count > 0 { Some(total_feerate / count as f64) } else { None };
+        let min_feerate_opt = if min_feerate != f64::MAX { Some(min_feerate) } else { None };
+        let max_feerate_opt = if max_feerate != f64::MIN { Some(max_feerate) } else { None };
+
+        // Save metrics to database
+        if let Err(e) = state.mempool_metrics_service.save_metrics(
+            &mut ctx,
+            mempool_info.size as i32,
+            mempool_info.bytes as i64,
+            mempool_info.total_fee as f64 / 100_000_000.0, // Convert sat to BTC
+            min_feerate_opt,
+            max_feerate_opt,
+            avg_feerate,
+        ).await {
+            eprintln!("Failed to save mempool metrics: {}", e);
+        } else {
+            println!("Mempool metrics saved successfully");
         }
     }
 }
