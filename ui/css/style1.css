@@ -721,25 +721,36 @@ table {
     flex-wrap: wrap;
 }
 
+/* Metric selector */
 .metric-buttons {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    margin: 15px 0;
+    flex-wrap: wrap;
 }
 
-.metric-btn {
-    background: #2a2a3a;
-    border: none;
-    padding: 8px 16px;
+.mempool-metric-btn {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 6px 14px;
     border-radius: 20px;
-    color: #ccc;
     cursor: pointer;
+    font-size: 13px;
     transition: all 0.2s;
 }
 
-.metric-btn.active {
-    background: #f7931a;
+.mempool-metric-btn:hover {
+    border-color: #f7931a;
+    color: #f7931a;
 }
+
+.mempool-metric-btn.active {
+    background: #f7931a;
+    border-color: #f7931a;
+    color: white;
+}
+/* --- */
 
 .blockchain-chart-container {
     width: 100%;

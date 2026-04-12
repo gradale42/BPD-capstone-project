@@ -1,3 +1,4 @@
+// src/api/mempool_metrics.rs
 use crate::domain::mempool_metrics::MempoolTimeRange;
 use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
@@ -20,7 +21,10 @@ pub async fn get_mempool_timeseries(
     };
 
     match state.mempool_metrics_service.get_timeseries(&mut ctx, query.from, query.to).await {
-        Ok(points) => HttpResponse::Ok().json(points),
+        Ok(points) => {
+            println!("Mempool timeseries: found {} points", points.len());
+            HttpResponse::Ok().json(points)
+        },
         Err(e) => {
             eprintln!("Mempool timeseries error: {}", e);
             HttpResponse::InternalServerError().json(json!({

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS mempool_metrics (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID NOT NULL DEFAULT gen_random_uuid(),
     network bitcoin_network NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     tx_count INTEGER NOT NULL,
@@ -14,4 +14,4 @@ CREATE TABLE IF NOT EXISTS mempool_metrics (
 );
 
 CREATE INDEX IF NOT EXISTS idx_mempool_metrics_timestamp ON mempool_metrics(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_mempool_metrics_network_time ON mempool_metricфs(network, timestamp);
+CREATE INDEX IF NOT EXISTS idx_mempool_metrics_network_time ON mempool_metrics(network, timestamp);

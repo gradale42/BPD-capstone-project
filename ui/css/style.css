@@ -1431,7 +1431,7 @@ table {
     box-shadow: 0 0 6px #3fb950;
 }
 
-/* Date Range Picker */
+/* Date Range Picker - общий стиль для всех пикеров */
 .date-range-container {
     background: #21262d;
     border-radius: 8px;
@@ -1443,7 +1443,8 @@ table {
     border-color: #f7931a;
 }
 
-#blockchain-daterange {
+/* Общий стиль для всех пикеров */
+.date-range-picker {
     background: #ffffff !important;
     border-radius: 8px;
     padding: 8px 16px;
@@ -1454,11 +1455,11 @@ table {
     font-size: 14px;
 }
 
-#blockchain-daterange span {
+.date-range-picker span {
     color: #212529 !important;
 }
 
-#blockchain-daterange i {
+.date-range-picker i {
     color: #f7931a !important;
 }
 

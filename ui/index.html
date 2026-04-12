@@ -42,6 +42,8 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <!-- Moment & DateRangePicker -->
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 
@@ -386,7 +388,7 @@
                 <div class="analytics-header">
                     <h3><i class="fas fa-chart-line"></i> Blockchain Metrics</h3>
                     <div class="date-range-container" id="blockchain-daterange-container">
-                        <div id="blockchain-daterange">
+                        <div id="blockchain-daterange" class="date-range-picker">
                             <i class="fas fa-calendar-alt"></i>
                             <span></span>
                             <i class="fas fa-chevron-down"></i>
@@ -394,29 +396,35 @@
                     </div>
                 </div>
                 <div class="metric-buttons">
-                    <button class="metric-btn active" data-metric="tx_count">Transactions</button>
+                    <button class="metric-btn active" data-metric="all">All Metrics</button>
+                    <button class="metric-btn" data-metric="tx_count">Transactions</button>
                     <button class="metric-btn" data-metric="avg_fee_sat">Avg Fee (sat)</button>
                     <button class="metric-btn" data-metric="avg_feerate">Fee Rate (sat/vB)</button>
                 </div>
-
                 <div id="blockchain-chart" class="blockchain-chart-container"></div>
             </div>
 
             <!-- Mempool Metrics Section -->
             <div class="mempool-metrics-section" style="margin-top: 40px;">
                 <div class="analytics-header">
-                    <h3><i class="fas fa-memory"></i> Mempool Metrics</h3>
+                    <h3><i class="fas fa-memory"></i> Mempool Historical Metrics</h3>
                     <div class="date-range-container" id="mempool-daterange-container">
-                        <div id="mempool-daterange">
+                        <div id="mempool-daterange" class="date-range-picker">
                             <i class="fas fa-calendar-alt"></i>
                             <span></span>
                             <i class="fas fa-chevron-down"></i>
                         </div>
                     </div>
                 </div>
-                <div id="mempool-metrics-chart" style="height: 400px; width: 100%;">
-                    <canvas id="mempoolMetricsChart"></canvas>
+
+                <div class="metric-buttons">
+                    <button class="mempool-metric-btn active" data-metric="tx_count">TX Count</button>
+                    <button class="mempool-metric-btn" data-metric="vbytes">vBytes (MB)</button>
+                    <button class="mempool-metric-btn" data-metric="avg_feerate">Fee Rate (sat/vB)</button>
+                    <button class="mempool-metric-btn" data-metric="all">All Metrics</button>
                 </div>
+
+                <div id="mempool-chart" style="height: 500px; width: 100%;"></div>
             </div>
 
             <!-- Network Charts Section -->

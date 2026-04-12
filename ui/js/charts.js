@@ -4,17 +4,21 @@ let feeRateChart, mempoolChart, bandwidthChart;
 // init charts on page load
 function initCharts() {
     initFeeRateChart();
-    initMempoolChart();
+    initMempoolChart();  // Keep this for live data (last 24 hours)
     initBandwidthChart();
 
-    // Обновление каждые 30 секунд
     setInterval(updateCharts, 30000);
 }
 
 // chart for fee rate
 function initFeeRateChart() {
-    const ctx = document.getElementById('feeRateChart').getContext('2d');
-    feeRateChart = new Chart(ctx, {
+    const ctx = document.getElementById('feeRateChart');
+    if (!ctx) {
+        console.log('feeRateChart canvas not found');
+        return;
+    }
+
+    feeRateChart = new Chart(ctx.getContext('2d'), {
         type: 'line',
         data: {
             labels: [],
@@ -52,10 +56,15 @@ function initFeeRateChart() {
     });
 }
 
-// mempool chart
+// Live mempool chart (last 24 hours)
 function initMempoolChart() {
-    const ctx = document.getElementById('mempoolChart').getContext('2d');
-    mempoolChart = new Chart(ctx, {
+    const ctx = document.getElementById('mempoolChart');
+    if (!ctx) {
+        console.log('mempoolChart canvas not found');
+        return;
+    }
+
+    mempoolChart = new Chart(ctx.getContext('2d'), {
         type: 'line',
         data: {
             labels: [],
@@ -66,7 +75,8 @@ function initMempoolChart() {
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
                     yAxisID: 'y',
-                    tension: 0.4
+                    tension: 0.4,
+                    fill: true
                 },
                 {
                     label: 'vBytes',
@@ -74,7 +84,8 @@ function initMempoolChart() {
                     borderColor: '#7c3aed',
                     backgroundColor: 'rgba(124, 58, 237, 0.1)',
                     yAxisID: 'y1',
-                    tension: 0.4
+                    tension: 0.4,
+                    fill: true
                 }
             ]
         },
@@ -84,7 +95,20 @@ function initMempoolChart() {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Mempool Size (TX Count & vBytes)'
+                    text: 'Live Mempool Size (Last 24 Hours)'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            let value = context.raw;
+                            if (context.dataset.label === 'vBytes') {
+                                value = (value / 1024 / 1024).toFixed(2);
+                                return `${label}: ${value} MB`;
+                            }
+                            return `${label}: ${value.toLocaleString()}`;
+                        }
+                    }
                 }
             },
             scales: {
@@ -95,7 +119,8 @@ function initMempoolChart() {
                     title: {
                         display: true,
                         text: 'TX Count'
-                    }
+                    },
+                    beginAtZero: true
                 },
                 y1: {
                     type: 'linear',
@@ -103,21 +128,248 @@ function initMempoolChart() {
                     position: 'right',
                     title: {
                         display: true,
-                        text: 'vBytes'
+                        text: 'vBytes (MB)'
                     },
                     grid: {
                         drawOnChartArea: false
-                    }
+                    },
+                    beginAtZero: true
                 }
             }
         }
     });
 }
 
+let mempoolMetricsChart = null;
+let currentMempoolMetric = 'all';
+let currentMempoolData = { tx_count: [], vbytes: [], avg_feerate: [] };
+
+function initMempoolMetricsChart() {
+    const container = document.getElementById('mempool-chart');
+    if (!container) {
+        console.log('mempool-chart container not found');
+        return;
+    }
+
+    if (mempoolMetricsChart) {
+        mempoolMetricsChart.dispose();
+    }
+
+    mempoolMetricsChart = echarts.init(container);
+
+    const option = {
+        title: {
+            text: 'Mempool Historical Metrics',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            valueFormatter: (value, seriesName) => {
+                if (value === undefined || value === null) return 'N/A';
+                if (seriesName === 'vBytes (MB)') {
+                    return (value / 1024 / 1024).toFixed(2) + ' MB';
+                }
+                if (seriesName === 'Fee Rate (sat/vB)') {
+                    return value.toFixed(2) + ' sat/vB';
+                }
+                return value.toLocaleString();
+            }
+        },
+        legend: {
+            data: ['TX Count', 'vBytes (MB)', 'Fee Rate (sat/vB)'],
+            left: 'left',
+            orient: 'vertical'
+        },
+        grid: {
+            left: '8%',
+            right: '8%',
+            bottom: '12%',
+            containLabel: true
+        },
+        toolbox: {
+            feature: {
+                saveAsImage: {},
+                restore: {},
+                zoom: {}
+            }
+        },
+        xAxis: {
+            type: 'time',
+            name: 'Date',
+            nameLocation: 'middle',
+            nameGap: 30
+        },
+        yAxis: [
+            {
+                type: 'value',
+                name: 'TX Count',
+                position: 'left',
+                alignTicks: true
+            },
+            {
+                type: 'value',
+                name: 'vBytes (MB)',
+                position: 'right',
+                alignTicks: true,
+                axisLabel: {
+                    formatter: (value) => (value / 1024 / 1024).toFixed(0) + 'M'
+                }
+            },
+            {
+                type: 'value',
+                name: 'Fee Rate (sat/vB)',
+                position: 'right',
+                offset: 80,
+                alignTicks: true,
+                axisLabel: {
+                    formatter: (value) => value.toFixed(0)
+                }
+            }
+        ],
+        series: [
+            {
+                name: 'TX Count',
+                type: 'line',
+                smooth: true,
+                data: [],
+                yAxisIndex: 0,
+                lineStyle: { color: '#2563eb', width: 2 },
+                areaStyle: { opacity: 0.1, color: '#2563eb' }
+            },
+            {
+                name: 'vBytes (MB)',
+                type: 'line',
+                smooth: true,
+                data: [],
+                yAxisIndex: 1,
+                lineStyle: { color: '#7c3aed', width: 2 },
+                areaStyle: { opacity: 0.1, color: '#7c3aed' }
+            },
+            {
+                name: 'Fee Rate (sat/vB)',
+                type: 'line',
+                smooth: true,
+                data: [],
+                yAxisIndex: 2,
+                lineStyle: { color: '#f59e0b', width: 2 },
+                areaStyle: { opacity: 0.1, color: '#f59e0b' }
+            }
+        ],
+        dataZoom: [
+            {
+                type: 'inside',
+                start: 0,
+                end: 100
+            },
+            {
+                type: 'slider',
+                start: 0,
+                end: 100,
+                bottom: 10,
+                height: 20,
+                brushSelect: true,
+                zoomOnMouseWheel: true
+            }
+        ]
+    };
+
+    mempoolMetricsChart.setOption(option);
+
+    // Add resize handler
+    window.addEventListener('resize', () => mempoolMetricsChart.resize());
+
+    // Add metric buttons handlers
+    document.querySelectorAll('.mempool-metric-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.mempool-metric-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentMempoolMetric = btn.dataset.metric;
+            updateMempoolChartVisibility();
+        });
+    });
+
+    console.log('Mempool historical metrics chart initialized');
+}
+
+function updateMempoolChartVisibility() {
+    if (!mempoolMetricsChart) return;
+
+    const series = mempoolMetricsChart.getOption().series;
+
+    if (currentMempoolMetric === 'all') {
+        // Show all series
+        series.forEach(s => s.show = true);
+    } else {
+        // Show only selected metric
+        series.forEach(s => {
+            if (s.name === 'TX Count' && currentMempoolMetric === 'tx_count') s.show = true;
+            else if (s.name === 'vBytes (MB)' && currentMempoolMetric === 'vbytes') s.show = true;
+            else if (s.name === 'Fee Rate (sat/vB)' && currentMempoolMetric === 'avg_feerate') s.show = true;
+            else s.show = false;
+        });
+    }
+
+    mempoolMetricsChart.setOption({ series: series });
+}
+
+async function refreshMempoolMetricsChart(startDate, endDate) {
+    if (!mempoolMetricsChart) {
+        console.log('Chart not initialized, skipping refresh');
+        return;
+    }
+
+    try {
+        const from = Math.floor(startDate.valueOf() / 1000);
+        const to = Math.floor(endDate.valueOf() / 1000);
+        const url = `/api/mempool/timeseries?from=${from}&to=${to}`;
+        console.log('Fetching historical mempool data from:', url);
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Received historical mempool data:', data.length, 'points');
+
+        if (data && data.length > 0) {
+            const txCountData = data.map(item => [item.time * 1000, item.tx_count]);
+            const vbytesData = data.map(item => [item.time * 1000, item.vbytes]);
+            const feeRateData = data.map(item => [item.time * 1000, item.avg_feerate || 0]);
+
+            mempoolMetricsChart.setOption({
+                series: [
+                    { data: txCountData, show: currentMempoolMetric === 'all' || currentMempoolMetric === 'tx_count' },
+                    { data: vbytesData, show: currentMempoolMetric === 'all' || currentMempoolMetric === 'vbytes' },
+                    { data: feeRateData, show: currentMempoolMetric === 'all' || currentMempoolMetric === 'avg_feerate' }
+                ]
+            });
+
+            console.log('Chart updated with', data.length, 'points');
+        } else {
+            mempoolMetricsChart.setOption({
+                series: [
+                    { data: [], show: true },
+                    { data: [], show: true },
+                    { data: [], show: true }
+                ]
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching historical mempool timeseries:', error);
+    }
+}
+
 // bandwidth chart
 function initBandwidthChart() {
-    const ctx = document.getElementById('bandwidthChart').getContext('2d');
-    bandwidthChart = new Chart(ctx, {
+    const ctx = document.getElementById('bandwidthChart');
+    if (!ctx) {
+        console.log('bandwidthChart canvas not found');
+        return;
+    }
+
+    bandwidthChart = new Chart(ctx.getContext('2d'), {
         type: 'line',
         data: {
             labels: [],
@@ -127,14 +379,16 @@ function initBandwidthChart() {
                     data: [],
                     borderColor: '#059669',
                     backgroundColor: 'rgba(5, 150, 105, 0.1)',
-                    tension: 0.4
+                    tension: 0.4,
+                    fill: true
                 },
                 {
                     label: 'Bytes Received',
                     data: [],
                     borderColor: '#dc2626',
                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                    tension: 0.4
+                    tension: 0.4,
+                    fill: true
                 }
             ]
         },
@@ -160,21 +414,21 @@ function initBandwidthChart() {
     });
 }
 
-// data refresh
+// data refresh for live charts (last 24 hours)
 async function updateCharts() {
     try {
         // hit API endpoint to get historical data for the last 24 hours
         const response = await fetch('/api/stats/historical?hours=24');
         const data = await response.json();
 
-        // refresh charts with new data
+        // refresh fee rate chart
         if (feeRateChart && data.blocks) {
             feeRateChart.data.labels = data.blocks.map(b => new Date(b.time * 1000).toLocaleTimeString());
             feeRateChart.data.datasets[0].data = data.blocks.map(b => b.avg_feerate);
             feeRateChart.update();
         }
 
-        // refresh mempool chart
+        // refresh live mempool chart
         if (mempoolChart && data.mempool) {
             mempoolChart.data.labels = data.mempool.map(m => new Date(m.timestamp).toLocaleTimeString());
             mempoolChart.data.datasets[0].data = data.mempool.map(m => m.tx_count);
@@ -192,147 +446,12 @@ async function updateCharts() {
     } catch (error) {
         console.error('Error updating charts:', error);
     }
-
-    function initCharts() {
-        console.log('Charts initialized');
-        // Add your chart initialization code here
-    }
 }
 
-
-let mempoolMetricsChart = null;
-
-async function initMempoolMetricsChart() {
-    const ctx = document.getElementById('mempoolMetricsChart');
-    if (!ctx) return;
-
-    mempoolMetricsChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [
-                {
-                    label: 'TX Count',
-                    data: [],
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    yAxisID: 'y',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'vBytes (MB)',
-                    data: [],
-                    borderColor: '#7c3aed',
-                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
-                    yAxisID: 'y1',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'Avg Fee Rate (sat/vB)',
-                    data: [],
-                    borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    yAxisID: 'y2',
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Mempool Metrics Over Time'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            let value = context.raw;
-                            if (context.dataset.label === 'vBytes (MB)') {
-                                value = (value / 1024 / 1024).toFixed(2);
-                                return `${label}: ${value} MB`;
-                            }
-                            return `${label}: ${value.toLocaleString()}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: 'Transaction Count'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'vBytes (MB)'
-                    },
-                    grid: {
-                        drawOnChartArea: false
-                    }
-                },
-                y2: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'Fee Rate (sat/vB)'
-                    },
-                    grid: {
-                        drawOnChartArea: false
-                    },
-                    position: 'right',
-                    offset: true
-                }
-            }
-        }
-    });
-}
-
-async function refreshMempoolMetricsChart(startDate, endDate) {
-    if (!mempoolMetricsChart) return;
-
-    try {
-        const from = Math.floor(startDate.valueOf() / 1000);
-        const to = Math.floor(endDate.valueOf() / 1000);
-        const response = await fetch(`/api/mempool/timeseries?from=${from}&to=${to}`);
-        const data = await response.json();
-
-        if (data && data.length) {
-            const labels = data.map(item => new Date(item.time * 1000));
-            const txCounts = data.map(item => item.tx_count);
-            const vbytes = data.map(item => item.vbytes);
-            const avgFeerates = data.map(item => item.avg_feerate || 0);
-
-            mempoolMetricsChart.data.labels = labels;
-            mempoolMetricsChart.data.datasets[0].data = txCounts;
-            mempoolMetricsChart.data.datasets[1].data = vbytes;
-            mempoolMetricsChart.data.datasets[2].data = avgFeerates;
-            mempoolMetricsChart.update();
-        }
-    } catch (error) {
-        console.error('Error fetching mempool timeseries:', error);
-    }
-}
-
-
+// Export functions for global access
+window.mempoolMetricsChart = mempoolMetricsChart;
 window.initMempoolMetricsChart = initMempoolMetricsChart;
 window.refreshMempoolMetricsChart = refreshMempoolMetricsChart;
+
+// Log that charts.js is loaded
+console.log('charts.js loaded');

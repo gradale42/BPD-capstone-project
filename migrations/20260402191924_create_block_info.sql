@@ -2,7 +2,6 @@
 CREATE TYPE bitcoin_network AS ENUM ('regtest', 'signet', 'testnet', 'mainnet');
 
 CREATE TABLE IF NOT EXISTS block_info (
-    -- Network field with constraint to strictly match Rust enum strings
     network          bitcoin_network NOT NULL,
     -- Block height is unique in the chain
     height           BIGINT NOT NULL,

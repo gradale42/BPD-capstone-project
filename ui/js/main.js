@@ -70,12 +70,14 @@ async function updateNetworkInfo() {
         const indicator = document.getElementById('network-indicator');
         const blockHeightSpan = document.getElementById('network-block-height');
 
-        if (data.blockchain_info && data.blockchain_info.blocks) {
-            blockHeightSpan.textContent = `Block ${data.blockchain_info.blocks.toLocaleString()}`;
-            indicator.style.backgroundColor = '#4caf50';
-        } else {
-            blockHeightSpan.textContent = 'Connected';
-            indicator.style.backgroundColor = '#f7931a';
+        if (indicator && blockHeightSpan) {
+            if (data.blockchain_info && data.blockchain_info.blocks) {
+                blockHeightSpan.textContent = `Block ${data.blockchain_info.blocks.toLocaleString()}`;
+                indicator.style.backgroundColor = '#4caf50';
+            } else {
+                blockHeightSpan.textContent = 'Connected';
+                indicator.style.backgroundColor = '#f7931a';
+            }
         }
 
         // Store current network in select element
@@ -83,7 +85,9 @@ async function updateNetworkInfo() {
         if (networkSelect && networkSelect.value !== data.current_network) {
             networkSelect.value = data.current_network;
         }
-        networkSelect.setAttribute('data-current', data.current_network);
+        if (networkSelect) {
+            networkSelect.setAttribute('data-current', data.current_network);
+        }
 
     } catch (error) {
         console.error('Error updating network info:', error);
@@ -161,9 +165,40 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (tabId === 'charts' && typeof blockchainChart !== 'undefined' && blockchainChart) {
-                // Small delay to ensure the chart container is visible and has dimensions before resizing
                 setTimeout(() => {
                     blockchainChart.resize();
+                }, 100);
+            }
+
+            // Initialize mempool metrics chart when charts tab is shown
+            if (tabId === 'charts') {
+                setTimeout(async () => {
+                    if (typeof window.initMempoolMetricsChart === 'function') {
+                        // Destroy existing chart if it exists to avoid "Canvas already in use" error
+                        if (window.mempoolMetricsChart) {
+                            window.mempoolMetricsChart.destroy();
+                        }
+                        await window.initMempoolMetricsChart();
+
+                        // Initialize date range picker for mempool metrics
+                        const mempoolContainer = document.getElementById('mempool-daterange');
+                        if (mempoolContainer && typeof DateRangePeeker !== 'undefined') {
+                            // Check if picker already exists
+                            if (!mempoolContainer._daterangepicker) {
+                                const mempoolPicker = new DateRangePeeker('mempool-daterange', async (start, end) => {
+                                    if (typeof window.refreshMempoolMetricsChart === 'function') {
+                                        await window.refreshMempoolMetricsChart(start, end);
+                                    }
+                                });
+                            }
+                            // Use the existing picker or blockchain picker
+                            const picker = mempoolContainer._daterangepicker ||
+                                document.getElementById('blockchain-daterange')._daterangepicker;
+                            if (picker) {
+                                await window.refreshMempoolMetricsChart(picker.startDate, picker.endDate);
+                            }
+                        }
+                    }
                 }, 100);
             }
 
@@ -173,33 +208,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
         });
-
-        const chartsTabButton = document.querySelector('[data-tab="charts"]');
-        if (chartsTabButton) {
-            chartsTabButton.addEventListener('click', async function() {
-                setTimeout(async () => {
-                    if (typeof window.initMempoolMetricsChart === 'function') {
-                        await window.initMempoolMetricsChart();
-
-                        // Initialize date range picker for mempool metrics
-                        const mempoolPicker = new DateRangePeeker('mempool-daterange', async (start, end) => {
-                            if (typeof window.refreshMempoolMetricsChart === 'function') {
-                                await window.refreshMempoolMetricsChart(start, end);
-                            }
-                        });
-
-                        // Initial load with default range
-                        const range = mempoolPicker.getCurrentRange();
-                        await window.refreshMempoolMetricsChart(range.startDate, range.endDate);
-                    }
-                }, 100);
-            });
-        }
     });
 
     // Initialize other components
     initLiveTiles();
-    initCharts();
+    if (typeof initCharts === 'function') {
+        initCharts();
+    }
 
     // Start auto-updates
     setInterval(updateLiveTiles, 5000);
@@ -216,9 +231,15 @@ async function updateLiveTiles() {
         const response = await fetch('/api/live');
         const data = await response.json();
 
-        document.getElementById('mempool-count').textContent = data.mempool_count?.toLocaleString() || '--';
-        document.getElementById('peer-count').textContent = data.peer_count || '--';
-        document.getElementById('hashrate').textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
+        // Check if elements exist before setting textContent
+        const mempoolCountEl = document.getElementById('mempool-count');
+        if (mempoolCountEl) mempoolCountEl.textContent = data.mempool_count?.toLocaleString() || '--';
+
+        const peerCountEl = document.getElementById('peer-count');
+        if (peerCountEl) peerCountEl.textContent = data.peer_count || '--';
+
+        const hashrateEl = document.getElementById('hashrate');
+        if (hashrateEl) hashrateEl.textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
 
         await updateMempoolStats();
     } catch (error) {
@@ -257,7 +278,8 @@ async function updateIndexerTile() {
 }
 
 function updateTimestamp() {
-    document.getElementById('update-time').textContent = new Date().toLocaleTimeString();
+    const updateTimeEl = document.getElementById('update-time');
+    if (updateTimeEl) updateTimeEl.textContent = new Date().toLocaleTimeString();
 }
 
 // Function for the Live Stats tiles
@@ -266,15 +288,27 @@ async function fetchLiveStats() {
         const response = await fetch('/api/live');
         const data = await response.json();
 
-        document.getElementById('mempool-count').textContent = data.mempool_count?.toLocaleString() || '--';
-        document.getElementById('peer-count').textContent = data.peer_count || '--';
-        document.getElementById('hashrate').textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
-        document.getElementById('update-time').textContent = new Date().toLocaleTimeString();
+        const mempoolCountEl = document.getElementById('mempool-count');
+        if (mempoolCountEl) mempoolCountEl.textContent = data.mempool_count?.toLocaleString() || '--';
+
+        const peerCountEl = document.getElementById('peer-count');
+        if (peerCountEl) peerCountEl.textContent = data.peer_count || '--';
+
+        const hashrateEl = document.getElementById('hashrate');
+        if (hashrateEl) hashrateEl.textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
+
+        const updateTimeEl = document.getElementById('update-time');
+        if (updateTimeEl) updateTimeEl.textContent = new Date().toLocaleTimeString();
     } catch (error) {
         console.error('Error fetching live stats:', error);
-        document.getElementById('mempool-count').textContent = 'Error';
-        document.getElementById('peer-count').textContent = 'Error';
-        document.getElementById('hashrate').textContent = 'Error';
+        const mempoolCountEl = document.getElementById('mempool-count');
+        if (mempoolCountEl) mempoolCountEl.textContent = 'Error';
+
+        const peerCountEl = document.getElementById('peer-count');
+        if (peerCountEl) peerCountEl.textContent = 'Error';
+
+        const hashrateEl = document.getElementById('hashrate');
+        if (hashrateEl) hashrateEl.textContent = 'Error';
     }
 }
 
@@ -289,7 +323,7 @@ async function fetchIndexerStats() {
         const isEqual = (lastBlockLive === lastBlockIndex) && lastBlockLive !== '--';
         const indicatorColor = isEqual ? '#4caf50' : '#f44336';
 
-        // Обновляем только значения, не трогая структуру
+        // Update only the values without changing structure
         const liveSpan = document.getElementById('last-block-live');
         const indexSpan = document.getElementById('last-block-index');
         const indicatorSpan = document.getElementById('last-block-indicator');
@@ -307,9 +341,14 @@ async function updateMempoolStats() {
         const response = await fetch('/api/mempool/stats');
         const data = await response.json();
 
-        document.getElementById('mempool-tx-count').textContent = data.tx_count?.toLocaleString() || '--';
-        document.getElementById('mempool-vbytes').textContent = data.vbytes ? `${data.vbytes.toLocaleString()} vB` : '-- vB';
-        document.getElementById('mempool-fees').textContent = data.total_fees ? `${data.total_fees.toFixed(8)} BTC` : '-- BTC';
+        const txCountEl = document.getElementById('mempool-tx-count');
+        if (txCountEl) txCountEl.textContent = data.tx_count?.toLocaleString() || '--';
+
+        const vbytesEl = document.getElementById('mempool-vbytes');
+        if (vbytesEl) vbytesEl.textContent = data.vbytes ? `${data.vbytes.toLocaleString()} vB` : '-- vB';
+
+        const feesEl = document.getElementById('mempool-fees');
+        if (feesEl) feesEl.textContent = data.total_fees ? `${data.total_fees.toFixed(8)} BTC` : '-- BTC';
     } catch (error) {
         console.error('Error updating mempool stats:', error);
     }
@@ -330,7 +369,6 @@ fetchIndexerStats();
 // Set up periodic updates
 setInterval(fetchLiveStats, 10000);
 setInterval(fetchIndexerStats, 10000);
-
 
 $(document).on('click', '.tx-link', function(e) {
     e.preventDefault();
@@ -395,13 +433,23 @@ async function showTransactionDetails(txid) {
         const response = await fetch(`/api/transaction/${txid}`);
         const data = await response.json();
 
-        document.getElementById('tx-txid').textContent = txid;
-        document.getElementById('tx-time').textContent = data.time ? new Date(data.time * 1000).toLocaleString() : 'Unknown';
-        document.getElementById('tx-height').textContent = data.height || 'Mempool';
-        document.getElementById('tx-fee-rate').textContent = data.fee_rate ? `${data.fee_rate.toFixed(2)} sat/vB` : 'Unknown';
-        document.getElementById('tx-json').textContent = JSON.stringify(data, null, 2);
+        const txidEl = document.getElementById('tx-txid');
+        if (txidEl) txidEl.textContent = txid;
+
+        const timeEl = document.getElementById('tx-time');
+        if (timeEl) timeEl.textContent = data.time ? new Date(data.time * 1000).toLocaleString() : 'Unknown';
+
+        const heightEl = document.getElementById('tx-height');
+        if (heightEl) heightEl.textContent = data.height || 'Mempool';
+
+        const feeRateEl = document.getElementById('tx-fee-rate');
+        if (feeRateEl) feeRateEl.textContent = data.fee_rate ? `${data.fee_rate.toFixed(2)} sat/vB` : 'Unknown';
+
+        const jsonEl = document.getElementById('tx-json');
+        if (jsonEl) jsonEl.textContent = JSON.stringify(data, null, 2);
     } catch (error) {
         console.error('Error loading transaction details:', error);
-        document.getElementById('tx-json').textContent = `Error loading transaction: ${error.message}`;
+        const jsonEl = document.getElementById('tx-json');
+        if (jsonEl) jsonEl.textContent = `Error loading transaction: ${error.message}`;
     }
 }
