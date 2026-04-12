@@ -228,5 +228,5 @@ pub fn get_peer_count(rpc: &BitcoinClient) -> Result<usize, String> {
 
 pub fn get_network_hashrate(rpc: &BitcoinClient) -> Result<f64, String> {
     let hashrate = rpc.get_network_hash_ps(None, None).map_err(|e| e.to_string())?;
-    Ok(hashrate as f64 / 1e18) // EH/s
+    Ok(hashrate)
 }

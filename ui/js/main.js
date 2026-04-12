@@ -229,7 +229,9 @@ async function initLiveTiles() {
 async function updateLiveTiles() {
     try {
         const response = await fetch('/api/live');
-        const data = await response.json();
+        const result = await response.json();
+        if (result.status !== 'success') throw new Error(result.message);
+        const data = result.data || result.block;
 
         // Check if elements exist before setting textContent
         const mempoolCountEl = document.getElementById('mempool-count');
@@ -239,7 +241,7 @@ async function updateLiveTiles() {
         if (peerCountEl) peerCountEl.textContent = data.peer_count || '--';
 
         const hashrateEl = document.getElementById('hashrate');
-        if (hashrateEl) hashrateEl.textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
+        if (hashrateEl) hashrateEl.textContent = data.hashrate ? formatHashrate(data.hashrate) : '--';
 
         await updateMempoolStats();
     } catch (error) {
@@ -282,11 +284,43 @@ function updateTimestamp() {
     if (updateTimeEl) updateTimeEl.textContent = new Date().toLocaleTimeString();
 }
 
+function formatHashrate1(hashesPerSecond) {
+    if (!hashesPerSecond || hashesPerSecond === 0) return '--';
+
+    const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s', 'PH/s', 'EH/s'];
+
+    let i = 0;
+    while (hashesPerSecond >= 1000 && i < units.length - 1) {
+        hashesPerSecond /= 1000;
+        i++;
+    }
+
+    const decimals = hashesPerSecond < 1 ? 4 : 2;
+    return `${hashesPerSecond.toFixed(decimals)} ${units[i]}`;
+}
+
+function formatHashrate(value, decimals = 2) {
+    if (!value || value === 0) return '0 H/s';
+
+    const threshold = 0.001;
+    if (value < threshold) {
+        return `0 H/s`; // Or `0.00 H/s` if you want decimals
+    }
+
+    const expStr = value.toExponential(decimals);
+    const [mantissa, exponent] = expStr.split('e');
+    const cleanExponent = exponent.replace('+', '');
+
+    return `${mantissa} × 10^${cleanExponent} H/s`;
+}
+
 // Function for the Live Stats tiles
 async function fetchLiveStats() {
     try {
         const response = await fetch('/api/live');
-        const data = await response.json();
+        const result = await response.json();
+        if (result.status !== 'success') throw new Error(result.message);
+        const data = result.data || result.block;
 
         const mempoolCountEl = document.getElementById('mempool-count');
         if (mempoolCountEl) mempoolCountEl.textContent = data.mempool_count?.toLocaleString() || '--';
@@ -295,7 +329,8 @@ async function fetchLiveStats() {
         if (peerCountEl) peerCountEl.textContent = data.peer_count || '--';
 
         const hashrateEl = document.getElementById('hashrate');
-        if (hashrateEl) hashrateEl.textContent = data.hashrate ? data.hashrate.toFixed(2) : '--';
+        if (hashrateEl) hashrateEl.textContent = data.hashrate ? formatHashrate(data.hashrate, 2) : '--';
+        //if (hashrateEl) hashrateEl.textContent = data.hashrate ? data.hashrate.toExponential(5) + ' H/s' : '--';
 
         const updateTimeEl = document.getElementById('update-time');
         if (updateTimeEl) updateTimeEl.textContent = new Date().toLocaleTimeString();

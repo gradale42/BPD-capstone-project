@@ -11,11 +11,6 @@ pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
         let peer_count = get_peer_count(client).unwrap_or(0);
         let hashrate = get_network_hashrate(client).unwrap_or(0.0);
 
-        dbg!(mempool_count);
-        dbg!(peer_count);
-        dbg!(hashrate);
-
-
        Ok(json!({
             "mempool_count": mempool_count,
             "peer_count": peer_count,
