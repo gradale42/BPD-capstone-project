@@ -2,8 +2,8 @@ use actix_web::{get, web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
-use crate::api::execute_rpc;
 use crate::AppState;
+use crate::bitcoin::execute_rpc;
 
 #[derive(Debug, serde::Serialize)]
 pub struct DashboardStats {

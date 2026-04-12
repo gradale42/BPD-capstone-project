@@ -36,7 +36,8 @@ pub async fn get_peers(
     state: web::Data<AppState>,
     web::Query(params): web::Query<PeersParams>,
 ) -> impl Responder {
-    match state.node_manager.get_default_bitcoin_client().lock() {
+    let self1 = &state.node_manager;
+    match self1.get_default_current_client().lock() {
         Ok(client) => {
             
             let peers_raw = match client.get_peer_info() {

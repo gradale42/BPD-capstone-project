@@ -5,30 +5,28 @@ pub mod configuration;
 pub mod api;
 pub mod services;
 pub mod repositories;
+pub mod indexer;
+pub mod bitcoin;
 
 use actix_files as actix_fs;
 use std::net::TcpListener;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::collections::HashMap;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpServer};
 use actix_web::dev::Server;
-use bitcoincore_rpc::{Auth, Client};
 use sqlx::PgPool;
-use dashmap::DashMap;
-use serde_json::json;
-use configuration::{get_configuration, Network, BitcoinNodeConfig};
-use services::bitcoin::rpc::setup_wallet;
-use services::bitcoin::node_manager::BitcoinNodeManager;
+use configuration::{get_configuration, BitcoinNodeConfig, Network};
+use bitcoin::node_manager::BitcoinNodeManager;
 use crate::configuration::ALL_BITCOIN_NETWORKS;
 use crate::services::block_service::BlockService;
 use crate::services::scheduler_log_service::SchedulerLogService;
 use crate::repositories::{
     BlockRepository, PostgresBlockRepository,
-    SchedulerLogRepository, PostgresSchedulerLogRepository,
+    PostgresSchedulerLogRepository, SchedulerLogRepository,
 };
 use crate::repositories::mempool_metrics_repository::PostgresMempoolMetricsRepository;
 use crate::services::mempool_metrics_service::MempoolMetricsService;
-use crate::services::scheduler::SchedulerService;
+use crate::indexer::scheduler::SchedulerService;
 
 pub struct AppState {
     pub node_manager: Arc<BitcoinNodeManager>,
@@ -81,6 +79,9 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     println!("🌐 WEB SERVER:    http://127.0.0.1:{}", config.application_port);
     println!("🐘 POSTGRES:      {}:{}", config.database.host, config.database.port);
     println!("📀 DATABASE:      {}", config.database.database_name);
+    println!("📀 DBEAVER:      {}", "http://127.0.0.1:8978");
+    println!("📀 PGADMIN:      {}", "http://127.0.0.1:8979");
+    println!("📀 ADMINER:      {}", "http://127.0.0.1:8980");
     println!("================================================");
     
     let networks_info: Vec<String> = config.bitcoin.networks

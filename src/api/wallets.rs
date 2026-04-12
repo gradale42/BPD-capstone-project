@@ -44,7 +44,8 @@ pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
     let names_result = web::block({
         let state = state.clone();
         move || {
-            let client_arc = state.node_manager.get_default_bitcoin_client();
+            let self1 = &state.node_manager;
+            let client_arc = self1.get_default_current_client();
             let client = client_arc.lock().map_err(|_| "Lock error".to_string())?;
             // Convert bitcoincore_rpc::Error to String immediately
             client.list_wallets().map_err(|e| e.to_string())
@@ -64,7 +65,8 @@ pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
         let state_clone = state.clone();
 
         let info = web::block(move || {
-            let client_arc = state_clone.node_manager.get_bitcoin_client(&name);
+            let self1 = &state_clone.node_manager;
+            let client_arc = self1.get_current_client(&name);
             let client = client_arc.lock().map_err(|_| "Lock error".to_string())?;
 
             get_wallet_details(&client, &name).map_err(|e| e.to_string())
@@ -91,7 +93,8 @@ pub async fn get_wallet_details_handler(
     state: web::Data<AppState>,
     wallet_name: web::Path<String>,
 ) -> impl Responder {
-    match state.node_manager.get_bitcoin_client(&wallet_name).lock() {
+    let self1 = &state.node_manager;
+    match self1.get_current_client(&wallet_name).lock() {
         Ok(wallet_client) => {
             match get_wallet_details(&wallet_client, &wallet_name) {
                 Ok(info) => HttpResponse::Ok().json(json!({
@@ -115,7 +118,8 @@ pub async fn get_descriptors_handler(
     state: web::Data<AppState>,
     wallet_name: web::Path<String>,
 ) -> impl Responder {
-    match state.node_manager.get_bitcoin_client(&wallet_name).lock() {
+    let self1 = &state.node_manager;
+    match self1.get_current_client(&wallet_name).lock() {
         Ok(wallet_client) => {
             let params: Vec<Value> = vec![json!(false)];
 

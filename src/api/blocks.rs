@@ -1,5 +1,5 @@
 use crate::domain::block::{BlockInfo, BlocksParams, TimeRange};
-use crate::services::bitcoin::rpc::get_blocks_info;
+use crate::bitcoin::rpc::get_blocks_info;
 use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::bitcoin::Witness;

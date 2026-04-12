@@ -37,7 +37,8 @@ pub async fn get_mempool_transactions(
     state: web::Data<AppState>,
     web::Query(params): web::Query<MempoolTxsParams>,
 ) -> impl Responder {
-    match state.node_manager.get_default_bitcoin_client().lock() {
+    let self1 = &state.node_manager;
+    match self1.get_default_current_client().lock() {
         Ok(client) => {
             // Get all mempool transaction IDs
             let mempool_txids = match client.get_raw_mempool() {
@@ -138,7 +139,8 @@ pub async fn get_mempool_transactions(
 pub async fn get_mempool_stats(
     state: web::Data<AppState>,
 ) -> impl Responder {
-    match state.node_manager.get_default_bitcoin_client().lock() {
+    let self1 = &state.node_manager;
+    match self1.get_default_current_client().lock() {
         Ok(client) => {
             let mempool_info = match client.get_mempool_info() {
                 Ok(info) => info,
@@ -171,7 +173,8 @@ pub async fn get_transaction_details(
     path: web::Path<String>,
 ) -> impl Responder {
     let txid = path.into_inner();
-    match state.node_manager.get_default_bitcoin_client().lock() {
+    let self1 = &state.node_manager;
+    match self1.get_default_current_client().lock() {
         Ok(client) => {
             let txid_parsed = match txid.parse::<bitcoin::Txid>() {
                 Ok(t) => t,

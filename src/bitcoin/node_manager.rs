@@ -101,13 +101,3 @@ impl BitcoinNodeManager {
     }
 
 }
-
-impl BitcoinNodeManager {
-    pub fn get_bitcoin_client(&self, wallet_name: &str) -> Arc<Mutex<Client>> {
-        self.get_current_client(wallet_name)
-    }
-
-    pub fn get_default_bitcoin_client(&self) -> Arc<Mutex<Client>> {
-        self.get_default_current_client()
-    }
-}

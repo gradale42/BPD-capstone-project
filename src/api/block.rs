@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use std::fs;
 use crate::AppState;
 use bitcoincore_rpc::bitcoin::Witness;
-use crate::api::execute_rpc;
+use crate::bitcoin::execute_rpc;
 
 pub async fn get_block_by_hash(
     state: web::Data<AppState>,
@@ -87,7 +87,8 @@ pub async fn get_block_by_hash1(
     state: web::Data<AppState>,
     block_hash: web::Path<String>,
 ) -> impl Responder {
-    match state.node_manager.get_default_bitcoin_client().lock() {
+    let self1 = &state.node_manager;
+    match self1.get_default_current_client().lock() {
         Ok(client) => {
 
             let hash = match block_hash.parse() {

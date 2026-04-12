@@ -2,9 +2,7 @@ use std::future::Future;
 use sqlx::Acquire;
 use crate::configuration::Network;
 
-pub mod bitcoin;
 pub mod block_service;
-pub mod scheduler;
 pub mod scheduler_log_service;
 pub mod mempool_metrics_service;
 

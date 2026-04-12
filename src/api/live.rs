@@ -1,7 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde_json::json;
 use crate::AppState;
-use crate::services::bitcoin::rpc::{get_mempool_tx_count, get_peer_count, get_network_hashrate};
+use crate::bitcoin::rpc::{get_mempool_tx_count, get_peer_count, get_network_hashrate};
 
 pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
     let mempool_count = get_mempool_tx_count(&state.clone()).await.unwrap_or(0);

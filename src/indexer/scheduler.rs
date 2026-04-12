@@ -2,7 +2,7 @@ use crate::domain::block::BlockInfo;
 use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
 use crate::repositories::block_repository::BlockRepository;
 use crate::repositories::scheduler_log_repository::SchedulerLogRepository;
-use crate::services::bitcoin::rpc::get_blocks_info;
+use crate::bitcoin::rpc::get_blocks_info;
 use crate::AppState;
 use sqlx::{Error, PgConnection, PgPool};
 use std::sync::Arc;
@@ -47,7 +47,7 @@ impl SchedulerService {
                 println!("Running scheduled blockchain synchronization...");
 
                 // Run sync operations - these will create their own connections
-                Self::run_sync(&state_clone, blocks_count).await;
+                Self::run_blockchain_sync(&state_clone, blocks_count).await;
                 Self::run_mempool_sync(&state_clone).await;
             }
         });
@@ -76,7 +76,7 @@ impl SchedulerService {
         *self.is_running.lock().await
     }
 
-    async fn run_sync(state: &AppState, blocks_count: u64) {
+    async fn run_blockchain_sync(state: &AppState, blocks_count: u64) {
         println!("Saving blocks...");
 
         let network = state.node_manager.get_current_network();
@@ -162,7 +162,8 @@ impl SchedulerService {
 
         // Collect all data from the locked client first, then release the lock
         let (tx_count, vbytes, total_fees_btc, min_feerate_opt, max_feerate_opt, avg_feerate) = {
-            let client_arc = state.node_manager.get_default_bitcoin_client();
+            let self1 = &state.node_manager;
+            let client_arc = self1.get_default_current_client();
             let client = match client_arc.lock() {
                 Ok(guard) => guard,
                 Err(e) => {

@@ -32,7 +32,8 @@ pub async fn get_mempool(
     state: web::Data<AppState>,
     web::Query(params): web::Query<MempoolParams>,
 ) -> impl Responder {
-    match state.node_manager.get_default_bitcoin_client().lock() {
+    let self1 = &state.node_manager;
+    match self1.get_default_current_client().lock() {
         Ok(client) => {
             let mempool_info = match client.get_mempool_info() {
                 Ok(info) => info,
