@@ -10,31 +10,6 @@ use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
 use crate::AppState;
 use crate::domain::block::BlockInfo;
 
-#[deprecated(note = "Use BitcoinNodeManager instead")]
-pub fn connect() -> Result<BitcoinClient, Box<dyn std::error::Error>> {
-    let bitcoin_rpc = BitcoinClient::new(
-        "http://localhost:18443",
-        Auth::UserPass("alice".to_string(), "password".to_string()),
-    )?;
-
-    println!("Blockchain Info: {:?}", bitcoin_rpc.get_blockchain_info()?);
-    Ok(bitcoin_rpc)
-}
-
-#[deprecated(note = "Use BitcoinNodeManager instead")]
-pub fn connect_to_wallet(wallet_name: &str) -> Result<BitcoinClient, Box<dyn Error>> {
-    let url = format!("http://localhost:18443/wallet/{}", wallet_name);
-    BitcoinClient::new(
-        &url,
-        Auth::UserPass("alice".to_string(), "password".to_string()),
-    ).map_err(|e| e.into())
-}
-
-
-pub fn create_client(rpc_url: &str, rpc_user: &str, rpc_password: &str) -> Result<Client, Box<dyn Error>> {
-    let auth = Auth::UserPass(rpc_user.to_string(), rpc_password.to_string());
-    Ok(Client::new(rpc_url, auth)?)
-}
 
 pub fn create_wallet_client(rpc_url: &str, wallet_name: &str, rpc_user: &str, rpc_password: &str) -> Result<Client, Box<dyn Error>> {
     let wallet_url = format!("{}/wallet/{}", rpc_url, wallet_name);
@@ -241,40 +216,17 @@ pub async fn get_last_block_height(state: &AppState) -> Result<i64, String> {
     }
 }
 
-pub async fn get_mempool_tx_count(state: &AppState) -> Result<usize, String> {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            let txids = client.get_raw_mempool().map_err(|e| e.to_string())?;
-            Ok(txids.len())
-        }
-        Err(e) => Err(format!("Failed to lock RPC client: {}", e)),
-    }
+pub fn get_mempool_tx_count(rpc: &BitcoinClient) -> Result<usize, String> {
+    let txids = rpc.get_raw_mempool().map_err(|e| e.to_string())?;
+    Ok(txids.len())
 }
 
-pub async fn get_peer_count(state: &AppState) -> Result<usize, String> {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            let peers = client.get_peer_info().map_err(|e| e.to_string())?;
-            Ok(peers.len())
-        }
-        Err(e) => Err(format!("Failed to lock RPC client: {}", e)),
-    }
+pub fn get_peer_count(rpc: &BitcoinClient) -> Result<usize, String> {
+    let peers = rpc.get_peer_info().map_err(|e| e.to_string())?;
+    Ok(peers.len())
 }
 
-pub async fn get_network_hashrate(state: &AppState) -> Result<f64, String> {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            let hashrate = client.get_network_hash_ps(None, None).map_err(|e| e.to_string())?;
-            Ok(hashrate as f64 / 1e18) // EH/s
-        }
-        Err(e) => Err(format!("Failed to lock RPC client: {}", e)),
-    }
+pub fn get_network_hashrate(rpc: &BitcoinClient) -> Result<f64, String> {
+    let hashrate = rpc.get_network_hash_ps(None, None).map_err(|e| e.to_string())?;
+    Ok(hashrate as f64 / 1e18) // EH/s
 }
-
-
-
-
-
