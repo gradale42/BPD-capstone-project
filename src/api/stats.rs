@@ -2,8 +2,8 @@ use actix_web::{get, web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 use std::fs;
+use crate::api::bitcoin_rpc;
 use crate::AppState;
-use crate::bitcoin::execute_rpc;
 
 #[derive(Debug, serde::Serialize)]
 pub struct DashboardStats {
@@ -14,7 +14,7 @@ pub struct DashboardStats {
 }
 
 pub async fn get_stats(state: web::Data<AppState>) -> impl Responder {
-    execute_rpc(&state.node_manager,"", |client| {
+    bitcoin_rpc(&state.node_manager,"", |client| {
         let blockchain_info = client.get_blockchain_info()?;
         let mempool_info = client.get_mempool_info()?;
         let peers = client.get_peer_info()?;
