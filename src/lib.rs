@@ -4,7 +4,7 @@ pub mod domain;
 pub mod configuration;
 pub mod api;
 pub mod services;
-pub mod repositories;
+pub mod db;
 pub mod indexer;
 pub mod bitcoin;
 
@@ -20,11 +20,11 @@ use bitcoin::node_manager::BitcoinNodeManager;
 use crate::configuration::ALL_BITCOIN_NETWORKS;
 use crate::services::block_service::BlockService;
 use crate::services::scheduler_log_service::SchedulerLogService;
-use crate::repositories::{
+use crate::db::{
     BlockRepository, PostgresBlockRepository,
     PostgresSchedulerLogRepository, SchedulerLogRepository,
 };
-use crate::repositories::mempool_metrics_repository::PostgresMempoolMetricsRepository;
+use crate::db::mempool_metrics_repository::PostgresMempoolMetricsRepository;
 use crate::services::mempool_metrics_service::MempoolMetricsService;
 use crate::indexer::scheduler::SchedulerService;
 
@@ -97,7 +97,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     println!("   • All networks: {}", networks_info.join(", "));
     println!("================================================");
 
-    println!("📊 RPC endpoints: /api/stats, /api/blocks, /api/mempool, /api/peers");
+    println!("📊 RPC endpoints: /api/blocks, /api/mempool, /api/peers");
     println!("🛠️ Admin endpoints: /api/admin/import-descriptors, /api/admin/mine-blocks\n");
     println!("🌐 Network switch endpoint: POST /api/network/switch\n");
 

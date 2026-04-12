@@ -1,4 +1,3 @@
-pub mod stats;
 pub mod blocks;
 pub mod block;
 pub mod mempool;
@@ -24,7 +23,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/network/info", web::get().to(network::get_network_info))
             .route("/live", web::get().to(live::get_live_stats))
             .route("/indexer", web::get().to(indexer::get_indexer_stats))
-            .route("/stats", web::get().to(stats::get_stats))
             .route("/block/{block_hash}", web::get().to(block::get_block_by_hash))
             .route("/blocks", web::get().to(blocks::get_blocks))
             .route("/blocks/timeseries", web::get().to(blocks::get_block_timeseries))

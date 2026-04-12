@@ -1,4 +1,4 @@
-use crate::api::{blocks, mempool, peers, stats};
+use crate::api::{blocks, mempool, peers};
 use actix_web::web;
 use sqlx::{Decode, Encode, FromRow};
 use std::collections::HashMap;

@@ -1,7 +1,7 @@
 use crate::domain::block::BlockInfo;
 use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
-use crate::repositories::block_repository::BlockRepository;
-use crate::repositories::scheduler_log_repository::SchedulerLogRepository;
+use crate::db::block_repository::BlockRepository;
+use crate::db::scheduler_log_repository::SchedulerLogRepository;
 use crate::bitcoin::rpc::get_blocks_info;
 use crate::AppState;
 use sqlx::{Error, PgConnection, PgPool};

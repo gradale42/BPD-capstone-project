@@ -4,10 +4,7 @@ let feeRateChart, mempoolChart, bandwidthChart;
 // init charts on page load
 function initCharts() {
     initFeeRateChart();
-    initMempoolChart();  // Keep this for live data (last 24 hours)
-    initBandwidthChart();
-
-    setInterval(updateCharts, 30000);
+    initMempoolChart();
 }
 
 // chart for fee rate
@@ -358,93 +355,6 @@ async function refreshMempoolMetricsChart(startDate, endDate) {
         }
     } catch (error) {
         console.error('Error fetching historical mempool timeseries:', error);
-    }
-}
-
-// bandwidth chart
-function initBandwidthChart() {
-    const ctx = document.getElementById('bandwidthChart');
-    if (!ctx) {
-        console.log('bandwidthChart canvas not found');
-        return;
-    }
-
-    bandwidthChart = new Chart(ctx.getContext('2d'), {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [
-                {
-                    label: 'Bytes Sent',
-                    data: [],
-                    borderColor: '#059669',
-                    backgroundColor: 'rgba(5, 150, 105, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'Bytes Received',
-                    data: [],
-                    borderColor: '#dc2626',
-                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Bandwidth (Bytes Sent/Received)'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Bytes'
-                    }
-                }
-            }
-        }
-    });
-}
-
-// data refresh for live charts (last 24 hours)
-async function updateCharts() {
-    try {
-        // hit API endpoint to get historical data for the last 24 hours
-        const response = await fetch('/api/stats/historical?hours=24');
-        const data = await response.json();
-
-        // refresh fee rate chart
-        if (feeRateChart && data.blocks) {
-            feeRateChart.data.labels = data.blocks.map(b => new Date(b.time * 1000).toLocaleTimeString());
-            feeRateChart.data.datasets[0].data = data.blocks.map(b => b.avg_feerate);
-            feeRateChart.update();
-        }
-
-        // refresh live mempool chart
-        if (mempoolChart && data.mempool) {
-            mempoolChart.data.labels = data.mempool.map(m => new Date(m.timestamp).toLocaleTimeString());
-            mempoolChart.data.datasets[0].data = data.mempool.map(m => m.tx_count);
-            mempoolChart.data.datasets[1].data = data.mempool.map(m => m.vbytes);
-            mempoolChart.update();
-        }
-
-        // refresh bandwidth chart
-        if (bandwidthChart && data.peers) {
-            bandwidthChart.data.labels = data.peers.map(p => new Date(p.timestamp).toLocaleTimeString());
-            bandwidthChart.data.datasets[0].data = data.peers.map(p => p.bytes_sent_delta);
-            bandwidthChart.data.datasets[1].data = data.peers.map(p => p.bytes_recv_delta);
-            bandwidthChart.update();
-        }
-    } catch (error) {
-        console.error('Error updating charts:', error);
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::domain::block::{BlockInfo, TimeseriesPoint};
-use crate::repositories::block_repository::{BlockRepository, PostgresBlockRepository};
+use crate::db::block_repository::{BlockRepository, PostgresBlockRepository};
 use crate::services::ExecutionCtx;
 use sqlx::{Error, PgConnection, PgPool};
 use std::sync::Arc;

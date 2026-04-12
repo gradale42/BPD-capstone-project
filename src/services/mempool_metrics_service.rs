@@ -1,6 +1,6 @@
 use crate::configuration::Network;
 use crate::domain::mempool_metrics::{MempoolMetrics, MempoolMetricsPoint};
-use crate::repositories::mempool_metrics_repository::MempoolMetricsRepository;
+use crate::db::mempool_metrics_repository::MempoolMetricsRepository;
 use crate::services::ExecutionCtx;
 use sqlx::Error;
 use std::sync::Arc;

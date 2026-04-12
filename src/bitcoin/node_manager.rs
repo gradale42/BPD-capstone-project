@@ -45,7 +45,8 @@ impl BitcoinNodeManager {
         *self.current_network.lock().unwrap()
     }
 
-    pub fn get_client(&self, network: Network, wallet_name: &str) -> Arc<Mutex<Client>> {
+    pub fn get_current_client(&self, wallet_name: &str) -> Arc<Mutex<Client>> {
+        let network = self.get_current_network();
         let key = ClientKey::new(network, wallet_name.to_string());
 
         self.clients.entry(key.clone()).or_insert_with(|| {
@@ -70,11 +71,6 @@ impl BitcoinNodeManager {
 
             Arc::new(Mutex::new(client))
         }).value().clone()
-    }
-
-    pub fn get_current_client(&self, wallet_name: &str) -> Arc<Mutex<Client>> {
-        let network = self.get_current_network();
-        self.get_client(network, wallet_name)
     }
 
     pub fn get_default_current_client(&self) -> Arc<Mutex<Client>> {
