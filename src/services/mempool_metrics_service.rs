@@ -1,5 +1,5 @@
 use crate::configuration::Network;
-use crate::domain::mempool_metrics::{MempoolMetrics, MempoolMetricsPoint};
+use crate::domain::mempool::{MempoolMetrics, MempoolMetricsPoint};
 use crate::db::mempool_metrics_repository::MempoolMetricsRepository;
 use crate::services::ExecutionCtx;
 use sqlx::Error;

@@ -9,6 +9,7 @@ use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
+use std::error::Error;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MineParams {
@@ -16,24 +17,18 @@ pub struct MineParams {
 }
 
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
-    // Build wallet client for "student"
-    let self1 = &state.node_manager;
-    match self1.get_current_client("student").lock() {
-        Ok(student_client) => match import_descriptors(&student_client) {
-            Ok(_) => HttpResponse::Ok().json(json!({
-                "status": "success",
-                "message": "Descriptors imported successfully"
-            })),
-            Err(e) => HttpResponse::InternalServerError().json(json!({
-                "status": "error",
-                "message": format!("Import failed: {}", e)
-            })),
-        },
-        Err(e) => HttpResponse::InternalServerError().json(json!({
-            "status": "error",
-            "message": format!("Cannot connect to student wallet: {}", e)
-        })),
-    }
+    let node_manager = &state.node_manager;
+    let mut service_call = async move || -> Result<_, String> {
+        let rpc_result = node_manager
+            .execute_rpc("student_wallet", move |client| {
+                import_descriptors(client);
+                Ok(())
+            })
+            .await
+            .map_err(|e| format!("RPC failed: {}", e));
+        rpc_result
+    };
+    wrap_response(service_call().await)
 }
 
 pub async fn mine_blocks_handler(
@@ -47,45 +42,25 @@ pub async fn mine_blocks_handler(
         }));
     }
 
-    let self1 = &state.node_manager;
-    match self1.get_current_client("miner_wallet").lock() {
-        Ok(mining_client) => match setup_mining_address(&mining_client) {
-            Ok(mining_address) => {
-                println!(
-                    "\n=== Start up mining {} blocks to address {} ===",
-                    count, mining_address
-                );
-                let response =
-                    match mining_client.generate_to_address(count as u64, &mining_address) {
-                        Ok(block_hashes) => {
-                            println!("Mined blocks count: {}", block_hashes.len());
-                            HttpResponse::Ok().json(json!({
-                                "status": "success",
-                                "message": format!("Mined {} blocks", count),
-                                "blocks": block_hashes,
-                            }))
-                        }
-                        Err(e) => {
-                            println!("❌ Mining error: {}", e);
-                            HttpResponse::InternalServerError().json(json!({
-                                "status": "error",
-                                "message": format!("Mining failed: {}", e)
-                            }))
-                        }
-                    };
+    let node_manager = &state.node_manager;
+    let mut service_call = async move || -> Result<_, String> {
+        let rpc_result = node_manager
+            .execute_rpc("", move |client| {
+                let mining_address = setup_mining_address(client).unwrap();
+                let block_hashes =
+                    client.generate_to_address(count as u64, &mining_address).unwrap();
+                let res = format!("Mined blocks count: {}", block_hashes.len());
+                println!("\n=== {} ===", res);
                 println!("\n=== Done ===");
-                response
-            }
-            Err(e) => HttpResponse::InternalServerError().json(json!({
-                "status": "error",
-                "message": format!("Failed to get mining address: {}", e)
-            })),
-        },
-        Err(e) => HttpResponse::InternalServerError().json(json!({
-            "status": "error",
-            "message": format!("Cannot connect to mining wallet: {}", e)
-        })),
-    }
+                Ok(res)
+            })
+            .await
+            .map_err(|e| format!("RPC failed: {}", e))?;
+
+        Ok(rpc_result)
+    };
+
+    wrap_response(service_call().await)
 }
 pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> impl Responder {
     const DEFAULT_COUNT: u64 = 500;
@@ -94,7 +69,7 @@ pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> i
     let block_service = &state.block_service;
     let network = state.node_manager.get_current_network();
 
-    let mut operation = async move || -> Result<_, String> {
+    let mut service_call = async move || -> Result<_, String> {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let blocks =
@@ -112,5 +87,5 @@ pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> i
         Ok(db_result)
     };
 
-    wrap_response(operation().await)
+    wrap_response(service_call().await)
 }

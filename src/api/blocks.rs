@@ -88,7 +88,9 @@ pub async fn get_blocks(
 }
 
 pub async fn get_block_time_series(
-    state: web::Data<AppState>, mut ctx: ExecutionCtx, query: web::Query<TimeRange>,
+    state: web::Data<AppState>,
+    mut ctx: ExecutionCtx,
+    query: web::Query<TimeRange>,
 ) -> impl Responder {
     let block_service = &state.block_service;
     let mut operation = async move || -> Result<_, String> {

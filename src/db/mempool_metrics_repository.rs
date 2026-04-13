@@ -1,5 +1,5 @@
 use crate::configuration::Network;
-use crate::domain::mempool_metrics::{MempoolMetrics, MempoolMetricsPoint};
+use crate::domain::mempool::{MempoolMetrics, MempoolMetricsPoint};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{Error, PgConnection};

@@ -8,8 +8,6 @@ pub mod scheduler;
 pub mod indexer;
 pub mod live;
 pub mod network;
-pub mod mempool_txs;
-pub mod mempool_metrics;
 
 use std::fmt::Display;
 use std::future::Future;
@@ -31,10 +29,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/blocks", web::get().to(blocks::get_blocks))
             .route("/blocks/timeseries", web::get().to(blocks::get_block_time_series))
             .route("/mempool", web::get().to(mempool::get_mempool))
-            .route("/mempool/transactions", web::get().to(mempool_txs::get_mempool_transactions))
-            .route("/mempool/timeseries", web::get().to(mempool_metrics::get_mempool_timeseries))
-            .route("/mempool/stats", web::get().to(mempool_txs::get_mempool_stats))
-            .route("/transaction/{txid}", web::get().to(mempool_txs::get_transaction_details))
+            .route("/mempool/transactions", web::get().to(mempool::get_mempool_transactions))
+            .route("/mempool/transaction/{txid}", web::get().to(mempool::get_transaction_details))
+            .route("/mempool/timeseries", web::get().to(mempool::get_mempool_timeseries))
+            .route("/mempool/stats", web::get().to(mempool::get_mempool_stats))
             .route("/peers", web::get().to(peers::get_peers))
             .route("/admin/import-descriptors", web::post().to(admin::import_descriptors_handler))
             .route("/admin/mine-blocks", web::post().to(admin::mine_blocks_handler))

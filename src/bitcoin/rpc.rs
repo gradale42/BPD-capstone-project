@@ -1,18 +1,20 @@
+use crate::configuration::Network;
+use crate::domain::block::BlockInfo;
+use crate::AppState;
+use actix_web::web;
 use bitcoincore_rpc::bitcoin::Address;
+use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
 use bitcoincore_rpc::{Auth, Client as BitcoinClient, Client, RpcApi};
+use serde_json::{json, Value};
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::Duration;
-use actix_web::web;
-use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
-use crate::AppState;
-use crate::configuration::Network;
-use crate::domain::block::BlockInfo;
 
-
-pub fn create_wallet_client(rpc_url: &str, wallet_name: &str, rpc_user: &str, rpc_password: &str) -> Result<Client, Box<dyn Error>> {
+pub fn create_wallet_client(
+    rpc_url: &str, wallet_name: &str, rpc_user: &str, rpc_password: &str,
+) -> Result<Client, Box<dyn Error>> {
     let wallet_url = format!("{}/wallet/{}", rpc_url, wallet_name);
     let auth = Auth::UserPass(rpc_user.to_string(), rpc_password.to_string());
     Ok(Client::new(&wallet_url, auth)?)
@@ -45,8 +47,7 @@ pub fn setup_wallet(rpc: &BitcoinClient, name: &str) -> Result<(), Box<dyn Error
 
                 rpc.load_wallet(name)?;
                 println!("Manually loaded");
-            }
-            else if err.contains("lock") {
+            } else if err.contains("lock") {
                 println!("Wallet locked (normal), waiting 1s...");
                 sleep(Duration::from_secs(1));
 
@@ -55,8 +56,7 @@ pub fn setup_wallet(rpc: &BitcoinClient, name: &str) -> Result<(), Box<dyn Error
                 } else {
                     println!("Still locked but continuing - probably fine");
                 }
-            }
-            else {
+            } else {
                 return Err(e.into());
             }
         }
@@ -68,12 +68,15 @@ pub fn setup_wallet(rpc: &BitcoinClient, name: &str) -> Result<(), Box<dyn Error
 pub fn setup_mining_address(rpc: &BitcoinClient) -> Result<Address, Box<dyn Error>> {
     println!("\n=== Setting up mining address ===");
     let mining_address_unchecked = rpc.get_new_address(None, None)?;
-    let mining_address = mining_address_unchecked.require_network(bitcoin::network::Network::Regtest)?;
+    let mining_address =
+        mining_address_unchecked.require_network(bitcoin::network::Network::Regtest)?;
     println!("Mining address: {}", mining_address.to_string());
     Ok(mining_address)
 }
 
-pub fn mine_until_positive_balance(rpc: &BitcoinClient, mining_address: &Address) -> Result<u32, Box<dyn Error>> {
+pub fn mine_until_positive_balance(
+    rpc: &BitcoinClient, mining_address: &Address,
+) -> Result<u32, Box<dyn Error>> {
     println!("\n=== Mining blocks until positive balance ===");
     let mut blocks_mined = 0;
     let mut balance = 0.0;
@@ -100,9 +103,8 @@ pub fn import_descriptors(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
 
     setup_wallet(&rpc, "student")?;
 
-    let student_wallet = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../datadir")
-        .join("student_wallet.json");
+    let student_wallet =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../datadir").join("student_wallet.json");
     print!("{:?}", student_wallet);
     let student_wallet_data = fs::read_to_string(student_wallet)?;
     print!("{}", student_wallet_data);
@@ -123,26 +125,22 @@ pub fn import_descriptors(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn get_blocks_info(
-    rpc: &BitcoinClient,
-    network: Network,
-    length: Option<u64>,
+    rpc: &BitcoinClient, network: Network, length: Option<u64>,
 ) -> Result<Vec<BlockInfo>, std::io::Error> {
-
     let blockchain_info = match rpc.get_blockchain_info() {
         Ok(info) => info,
         Err(e) => {
             eprintln!("Error getting blockchain info: {}", e);
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to lock RPC client: {}", e)));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to lock RPC client: {}", e),
+            ));
         }
     };
 
     let current_height = blockchain_info.blocks;
     let length = length.unwrap_or(25);
-    let start = if current_height >= length {
-        current_height - length + 1
-    } else {
-        0
-    };
+    let start = if current_height >= length { current_height - length + 1 } else { 0 };
 
     let mut blocks = Vec::new();
 
@@ -154,7 +152,6 @@ pub fn get_blocks_info(
     // 3. Collect and resolve all handles using `futures::future::join_all(tasks).await`.
     // Note: Ensure `rpcworkqueue` and `rpcthreads` are increased in `bitcoin.conf` to handle concurrent requests!
     for height in start..=current_height {
-
         let block_hash = match rpc.get_block_hash(height) {
             Ok(hash) => hash,
             Err(e) => {
@@ -184,7 +181,7 @@ pub fn get_blocks_info(
         let total_fees_sats = block_stats.total_fee.to_sat() as f64;
 
         blocks.push(BlockInfo {
-            network: network,
+            network,
             height: height as i64,
             hash: block_hash.to_string(),
             time: block.header.time as i64,
@@ -229,4 +226,82 @@ pub fn get_peer_count(rpc: &BitcoinClient) -> Result<usize, String> {
 pub fn get_network_hashrate(rpc: &BitcoinClient) -> Result<f64, String> {
     let hashrate = rpc.get_network_hash_ps(None, None).map_err(|e| e.to_string())?;
     Ok(hashrate)
+}
+
+pub fn get_block_details(
+   client: &Client, hash_str: String,
+) -> Result<Value, bitcoincore_rpc::Error> {
+    let hash = hash_str.parse().expect("invalid hash");
+
+    let header_info = client.get_block_header_info(&hash)?;
+    let block = client.get_block(&hash)?;
+
+    let transactions: Vec<Value> = block
+        .txdata
+        .iter()
+        .map(|tx| {
+            let mut tx_obj = serde_json::Map::new();
+
+            tx_obj.insert("txid".to_string(), json!(tx.compute_txid().to_string()));
+            tx_obj.insert("version".to_string(), json!(tx.version));
+            tx_obj.insert("lock_time".to_string(), json!(tx.lock_time));
+            tx_obj.insert("size".to_string(), json!(tx.total_size()));
+            tx_obj.insert("vsize".to_string(), json!(tx.vsize()));
+            tx_obj.insert("weight".to_string(), json!(tx.weight()));
+
+            let inputs: Vec<Value> = tx
+                .input
+                .iter()
+                .map(|input| {
+                    let mut input_obj = serde_json::Map::new();
+                    input_obj
+                        .insert("txid".to_string(), json!(input.previous_output.txid.to_string()));
+                    input_obj.insert("vout".to_string(), json!(input.previous_output.vout));
+                    input_obj.insert("sequence".to_string(), json!(input.sequence));
+                    input_obj.insert("script_sig".to_string(), json!(input.script_sig.to_string()));
+
+                    let witness = &input.witness;
+                    let witness_values: Vec<String> =
+                        witness.iter().map(|w| format!("{:?}", w)).collect();
+                    input_obj.insert("witness".to_string(), json!(witness_values));
+
+                    Value::Object(input_obj)
+                })
+                .collect();
+            tx_obj.insert("inputs".to_string(), json!(inputs));
+
+            let outputs: Vec<Value> = tx
+                .output
+                .iter()
+                .map(|output| {
+                    let mut output_obj = serde_json::Map::new();
+                    output_obj.insert("value".to_string(), json!(output.value.to_btc()));
+                    output_obj.insert(
+                        "script_pubkey".to_string(),
+                        json!(output.script_pubkey.to_string()),
+                    );
+
+                    Value::Object(output_obj)
+                })
+                .collect();
+            tx_obj.insert("outputs".to_string(), json!(outputs));
+
+            serde_json::Value::Object(tx_obj)
+        })
+        .collect();
+
+    let block_json = json!({
+        "hash": hash_str,
+        "height": header_info.height,
+        "version": header_info.version,
+        "time": header_info.time,
+        "nonce": header_info.nonce,
+        "bits": header_info.bits,
+        "difficulty": header_info.difficulty,
+        "merkleroot": header_info.merkle_root,
+        "tx_count": block.txdata.len(),
+        "transactions": transactions
+    });
+
+    Ok(block_json)
 }

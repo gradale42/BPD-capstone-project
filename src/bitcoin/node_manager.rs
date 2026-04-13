@@ -92,7 +92,7 @@ impl BitcoinNodeManager {
         match result {
             Ok(Ok(data)) => Ok(data),
             Ok(Err(e)) => Err(e),
-            Err(e) => Err(format!("Thread pool error: {}", e)),
+            Err(e) => Err(format!("RPC error: {}", e)),
         }
     }
 

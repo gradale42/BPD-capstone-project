@@ -465,7 +465,7 @@ async function showTransactionDetails(txid) {
     modal.style.display = 'block';
 
     try {
-        const response = await fetch(`/api/transaction/${txid}`);
+        const response = await fetch(`/api/mempool/transaction/${txid}`);
         const data = await response.json();
 
         const txidEl = document.getElementById('tx-txid');
