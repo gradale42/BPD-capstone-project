@@ -1,13 +1,16 @@
+use crate::api::wrap_response;
+use crate::bitcoin::rpc::{
+    get_blocks_info, get_mempool_tx_count, get_network_hashrate, get_peer_count,
+};
 use crate::domain::block::{BlockInfo, BlocksParams, TimeRange};
-use crate::bitcoin::rpc::get_blocks_info;
+use crate::services::ExecutionCtx;
 use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::bitcoin::Witness;
 use bitcoincore_rpc::RpcApi;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::fs;
-use serde::Deserialize;
-use crate::services::ExecutionCtx;
 
 #[derive(Debug, serde::Serialize)]
 pub struct DataTableResponse<T> {
@@ -18,39 +21,16 @@ pub struct DataTableResponse<T> {
 }
 
 pub async fn get_blocks(
-    state: web::Data<AppState>,
-    params: web::Query<BlocksParams>,
+    state: web::Data<AppState>, mut ctx: ExecutionCtx, query: web::Query<BlocksParams>,
 ) -> impl Responder {
-    let mode = params.mode.as_deref().unwrap_or("live");
-    let length = params.length.unwrap_or(25) as u64;
-    let start = params.start.unwrap_or(0) as u64;
-
-
-    let network = state.node_manager.get_current_network();
-    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
-        Ok(context) => context,
-        Err(e) => {
-            eprintln!("Failed to acquire DB connection: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
-    };
+    let mode = query.mode.as_deref().unwrap_or("live");
+    let length = query.length.unwrap_or(25) as u64;
+    let start = query.start.unwrap_or(0) as u64;
 
     match mode {
         "index" => {
-            // database query
-            let total_blocks = match state.block_service.count_blocks_in_db(&mut ctx).await {
-                Ok(count) => count as usize,
-                Err(e) => {
-                    eprintln!("DB count error: {}", e);
-                    return HttpResponse::InternalServerError().json(json!({
-                        "error": format!("Database error: {}", e)
-                    }));
-                }
-            };
-
-            let order_by = if let Some(order) = &params.order {
+            // database mode
+            let order_by = if let Some(order) = &query.order {
                 let col_idx = order[0].column;
                 let dir = &order[0].dir;
                 let col_name = match col_idx {
@@ -69,70 +49,54 @@ pub async fn get_blocks(
                 "height DESC".to_string()
             };
 
-            let blocks = match state.block_service.get_blocks_from_db(&mut ctx, length as i64, start as i64, &order_by).await {
-                Ok(b) => b,
-                Err(e) => {
-                    eprintln!("DB list error: {}", e);
-                    return HttpResponse::InternalServerError().json(json!({
-                        "error": format!("Database error: {}", e)
-                    }));
-                }
+            let block_service = &state.block_service;
+            let mut operation = async move || -> Result<_, String> {
+                let db_result = block_service
+                    .get_blocks_from_db(&mut ctx, length as i64, start as i64, &order_by)
+                    .await
+                    .map_err(|e| format!("DB failed: {}", e))?;
+                Ok(db_result)
             };
 
-            let response = DataTableResponse {
-                draw: params.draw,
-                records_total: total_blocks,
-                records_filtered: total_blocks,
-                data: blocks,
-            };
-            HttpResponse::Ok().json(response)
+            wrap_response(operation().await)
         }
         _ => {
             // Live mode (RPC)
-            match get_blocks_info(&state.clone(), Some(length)).await {
-                Ok(blocks) => {
-                    let response = DataTableResponse {
-                        draw: params.draw,
-                        records_total: blocks.len(),
-                        records_filtered: blocks.len(),
-                        data: blocks,
-                    };
-                    HttpResponse::Ok().json(response)
-                }
-                Err(e) => {
-                    eprintln!("RPC error: {}", e);
-                    HttpResponse::InternalServerError().json(json!({
-                        "error": format!("RPC error: {}", e)
-                    }))
-                }
-            }
+            let node_manager = &state.node_manager;
+            let network = state.node_manager.get_current_network();
+
+            let mut operation = async move || -> Result<_, String> {
+                let rpc_result = node_manager
+                    .execute_rpc("", move |client| {
+                        let blocks = get_blocks_info(client, network, Some(length))?;
+                        let response = DataTableResponse {
+                            draw: query.draw,
+                            records_total: blocks.len(),
+                            records_filtered: blocks.len(),
+                            data: blocks,
+                        };
+                        Ok(response)
+                    })
+                    .await
+                    .map_err(|e| format!("RPC failed: {}", e))?;
+                Ok(rpc_result)
+            };
+
+            wrap_response(operation().await)
         }
     }
 }
 
-pub async fn get_block_timeseries(
-    state: web::Data<AppState>,
-    query: web::Query<TimeRange>,
+pub async fn get_block_time_series(
+    state: web::Data<AppState>, mut ctx: ExecutionCtx, query: web::Query<TimeRange>,
 ) -> impl Responder {
-
-    let network = state.node_manager.get_current_network();
-    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
-        Ok(context) => context,
-        Err(e) => {
-            eprintln!("Failed to acquire DB connection: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
+    let block_service = &state.block_service;
+    let mut operation = async move || -> Result<_, String> {
+        let db_result = block_service
+            .get_timeseries(&mut ctx, query.from, query.to)
+            .await
+            .map_err(|e| format!("DB failed: {}", e))?;
+        Ok(db_result)
     };
-
-    match state.block_service.get_timeseries(&mut ctx, query.from, query.to).await {
-        Ok(points) => HttpResponse::Ok().json(points),
-        Err(e) => {
-            eprintln!("Timeseries error: {}", e);
-            HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to fetch timeseries: {}", e)
-            }))
-        }
-    }
+    wrap_response(operation().await)
 }

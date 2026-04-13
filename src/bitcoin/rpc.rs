@@ -1,4 +1,4 @@
-use bitcoincore_rpc::bitcoin::{Address, Network};
+use bitcoincore_rpc::bitcoin::Address;
 use bitcoincore_rpc::{Auth, Client as BitcoinClient, Client, RpcApi};
 use std::error::Error;
 use std::fs;
@@ -8,6 +8,7 @@ use std::time::Duration;
 use actix_web::web;
 use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
 use crate::AppState;
+use crate::configuration::Network;
 use crate::domain::block::BlockInfo;
 
 
@@ -67,7 +68,7 @@ pub fn setup_wallet(rpc: &BitcoinClient, name: &str) -> Result<(), Box<dyn Error
 pub fn setup_mining_address(rpc: &BitcoinClient) -> Result<Address, Box<dyn Error>> {
     println!("\n=== Setting up mining address ===");
     let mining_address_unchecked = rpc.get_new_address(None, None)?;
-    let mining_address = mining_address_unchecked.require_network(Network::Regtest)?;
+    let mining_address = mining_address_unchecked.require_network(bitcoin::network::Network::Regtest)?;
     println!("Mining address: {}", mining_address.to_string());
     Ok(mining_address)
 }
@@ -121,88 +122,87 @@ pub fn import_descriptors(rpc: &BitcoinClient) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub async fn get_blocks_info(
-    state: &AppState,
+pub fn get_blocks_info(
+    rpc: &BitcoinClient,
+    network: Network,
     length: Option<u64>,
 ) -> Result<Vec<BlockInfo>, std::io::Error> {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
 
-            let blockchain_info = match client.get_blockchain_info() {
-                Ok(info) => info,
-                Err(e) => {
-                    eprintln!("Error getting blockchain info: {}", e);
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to lock RPC client: {}", e)));
-                }
-            };
-
-            let current_height = blockchain_info.blocks;
-            let length = length.unwrap_or(25);
-            let start = if current_height >= length {
-                current_height - length + 1
-            } else {
-                0
-            };
-
-            let mut blocks = Vec::new();
-
-            for height in start..=current_height {
-
-                let block_hash = match client.get_block_hash(height) {
-                    Ok(hash) => hash,
-                    Err(e) => {
-                        eprintln!("Error getting block hash at height {}: {}", height, e);
-                        continue;
-                    }
-                };
-
-                let block = match client.get_block(&block_hash) {
-                    Ok(block) => block,
-                    Err(e) => {
-                        eprintln!("Error getting block {}: {}", block_hash, e);
-                        continue;
-                    }
-                };
-
-                let block_stats = match client.get_block_stats(height) {
-                    Ok(stats) => stats,
-                    Err(e) => {
-                        eprintln!("Error getting block stats for height {}: {}", height, e);
-                        continue;
-                    }
-                };
-
-                let avg_fee_sats = block_stats.avg_fee.to_sat() as f64;
-                let avg_fee_rate_sats = block_stats.avg_fee_rate.to_sat() as f64;
-                let total_fees_sats = block_stats.total_fee.to_sat() as f64;
-
-                blocks.push(BlockInfo {
-                    network: state.node_manager.get_current_network(),
-                    height: height as i64,
-                    hash: block_hash.to_string(),
-                    time: block.header.time as i64,
-                    tx_count: block.txdata.len() as i32,
-                    avg_fee_sat: avg_fee_sats as i64,
-                    avg_feerate: avg_fee_rate_sats,
-                    total_fees_sat: total_fees_sats as i64,
-                    difficulty: 0.0, //block.header.difficulty() as f64,
-                    size: 0, // block size is not directly available in the block data, you may need to calculate it or fetch it separately
-                    weight: 0, // block weight is not directly available in the block data, you may need to calculate it or fetch it separately
-                    subsidy_sat: block_stats.subsidy.to_sat() as i64,
-                    indexed_at: None, // you can set this to the current timestamp when you insert it into the database
-                });
-            }
-
-            blocks.sort_by(|a, b| b.height.cmp(&a.height));
-
-            Ok(blocks)
-        }
+    let blockchain_info = match rpc.get_blockchain_info() {
+        Ok(info) => info,
         Err(e) => {
-            eprintln!("Error locking RPC client: {}", e);
-            Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to lock RPC client: {}", e)))
+            eprintln!("Error getting blockchain info: {}", e);
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Failed to lock RPC client: {}", e)));
         }
+    };
+
+    let current_height = blockchain_info.blocks;
+    let length = length.unwrap_or(25);
+    let start = if current_height >= length {
+        current_height - length + 1
+    } else {
+        0
+    };
+
+    let mut blocks = Vec::new();
+
+    // TODO: Performance Optimization (Multi-threading)
+    // The standard `bitcoincore-rpc` client is synchronous and blocks the thread on every call.
+    // To process blocks in parallel:
+    // 1. Wrap the `rpc` client in an `Arc` (e.g., `Arc<BitcoinClient>`) to clone it safely across threads.
+    // 2. Use `tokio::task::spawn_blocking` inside a loop for each block height to fetch data concurrently.
+    // 3. Collect and resolve all handles using `futures::future::join_all(tasks).await`.
+    // Note: Ensure `rpcworkqueue` and `rpcthreads` are increased in `bitcoin.conf` to handle concurrent requests!
+    for height in start..=current_height {
+
+        let block_hash = match rpc.get_block_hash(height) {
+            Ok(hash) => hash,
+            Err(e) => {
+                eprintln!("Error getting block hash at height {}: {}", height, e);
+                continue;
+            }
+        };
+
+        let block = match rpc.get_block(&block_hash) {
+            Ok(block) => block,
+            Err(e) => {
+                eprintln!("Error getting block {}: {}", block_hash, e);
+                continue;
+            }
+        };
+
+        let block_stats = match rpc.get_block_stats(height) {
+            Ok(stats) => stats,
+            Err(e) => {
+                eprintln!("Error getting block stats for height {}: {}", height, e);
+                continue;
+            }
+        };
+
+        let avg_fee_sats = block_stats.avg_fee.to_sat() as f64;
+        let avg_fee_rate_sats = block_stats.avg_fee_rate.to_sat() as f64;
+        let total_fees_sats = block_stats.total_fee.to_sat() as f64;
+
+        blocks.push(BlockInfo {
+            network: network,
+            height: height as i64,
+            hash: block_hash.to_string(),
+            time: block.header.time as i64,
+            tx_count: block.txdata.len() as i32,
+            avg_fee_sat: avg_fee_sats as i64,
+            avg_feerate: avg_fee_rate_sats,
+            total_fees_sat: total_fees_sats as i64,
+            difficulty: block.header.difficulty_float(),
+            size: block_stats.total_size as i32,
+            weight: block_stats.total_weight as i32,
+            subsidy_sat: block_stats.subsidy.to_sat() as i64,
+            indexed_at: None,
+        });
     }
+
+    blocks.sort_by(|a, b| b.height.cmp(&a.height));
+
+    Ok(blocks)
 }
 
 pub async fn get_last_block_height(state: &AppState) -> Result<i64, String> {

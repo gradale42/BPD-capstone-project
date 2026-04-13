@@ -11,9 +11,13 @@ pub mod network;
 pub mod mempool_txs;
 pub mod mempool_metrics;
 
+use std::fmt::Display;
+use std::future::Future;
 use actix_web::{web, HttpResponse};
+use serde::Serialize;
 use serde_json::json;
 use crate::bitcoin::node_manager::BitcoinNodeManager;
+use crate::services::ExecutionCtx;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -25,7 +29,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/indexer", web::get().to(indexer::get_indexer_stats))
             .route("/block/{block_hash}", web::get().to(block::get_block_by_hash))
             .route("/blocks", web::get().to(blocks::get_blocks))
-            .route("/blocks/timeseries", web::get().to(blocks::get_block_timeseries))
+            .route("/blocks/timeseries", web::get().to(blocks::get_block_time_series))
             .route("/mempool", web::get().to(mempool::get_mempool))
             .route("/mempool/transactions", web::get().to(mempool_txs::get_mempool_transactions))
             .route("/mempool/timeseries", web::get().to(mempool_metrics::get_mempool_timeseries))
@@ -46,19 +50,22 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 }
 
-pub async fn bitcoin_rpc<F, R>(node_manager: &BitcoinNodeManager, wallet_name: &str, f: F) -> HttpResponse
+pub fn wrap_response<R, E>(result: Result<R, E>) -> HttpResponse
 where
-    F: FnOnce(&bitcoincore_rpc::Client) -> Result<R, bitcoincore_rpc::Error> + Send + 'static,
-    R: serde::Serialize + Send + 'static,
+    R: Serialize,
+    E: Display,
 {
-    match node_manager.execute_rpc(wallet_name, f).await {
+    match result {
         Ok(data) => HttpResponse::Ok().json(json!({
-                "status": "success",
-                "data": data
-            })),
-        Err(err) => HttpResponse::InternalServerError().json(json!({
+            "status": "success",
+            "data": data
+        })),
+        Err(err) => {
+            eprintln!("API Error: {}", err);
+            HttpResponse::InternalServerError().json(json!({
                 "status": "error",
-                "message": err
-            })),
+                "message": err.to_string()
+            }))
+        }
     }
 }
