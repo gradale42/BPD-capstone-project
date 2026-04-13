@@ -1,9 +1,7 @@
-use actix_web::{web, HttpResponse, Responder};
-use serde_json::json;
 use crate::api::wrap_response;
-use crate::AppState;
-use crate::bitcoin::rpc::get_last_block_height as get_last_block_from_rpc;
 use crate::services::ExecutionCtx;
+use crate::AppState;
+use actix_web::{web, Responder};
 
 pub async fn get_indexer_stats(
     state: web::Data<AppState>,

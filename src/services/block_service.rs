@@ -1,7 +1,7 @@
+use crate::db::block_repository::BlockRepository;
 use crate::domain::block::{BlockInfo, TimeseriesPoint};
-use crate::db::block_repository::{BlockRepository, PostgresBlockRepository};
 use crate::services::ExecutionCtx;
-use sqlx::{Error, PgConnection, PgPool};
+use sqlx::Error;
 use std::sync::Arc;
 
 pub struct BlockService {

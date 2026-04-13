@@ -1,16 +1,9 @@
 use crate::api::wrap_response;
-use crate::bitcoin::rpc::{
-    get_blocks_info, get_mempool_tx_count, get_network_hashrate, get_peer_count,
-};
-use crate::domain::block::{BlockInfo, BlocksParams, TimeRange};
+use crate::bitcoin::rpc::get_blocks_info;
+use crate::domain::block::{BlocksParams, TimeRange};
 use crate::services::ExecutionCtx;
 use crate::AppState;
-use actix_web::{web, HttpResponse, Responder};
-use bitcoincore_rpc::bitcoin::Witness;
-use bitcoincore_rpc::RpcApi;
-use serde::Deserialize;
-use serde_json::{json, Value};
-use std::fs;
+use actix_web::{web, Responder};
 
 #[derive(Debug, serde::Serialize)]
 pub struct DataTableResponse<T> {
@@ -50,7 +43,7 @@ pub async fn get_blocks(
             };
 
             let block_service = &state.block_service;
-            let mut operation = async move || -> Result<_, String> {
+            let mut service_call = async move || -> Result<_, String> {
                 let db_result = block_service
                     .get_blocks_from_db(&mut ctx, length as i64, start as i64, &order_by)
                     .await
@@ -58,14 +51,14 @@ pub async fn get_blocks(
                 Ok(db_result)
             };
 
-            wrap_response(operation().await)
+            wrap_response(service_call().await)
         }
         _ => {
             // Live mode (RPC)
             let node_manager = &state.node_manager;
             let network = state.node_manager.get_current_network();
 
-            let mut operation = async move || -> Result<_, String> {
+            let service_call = async move || -> Result<_, String> {
                 let rpc_result = node_manager
                     .execute_rpc("", move |client| {
                         let blocks = get_blocks_info(client, network, Some(length))?;
@@ -82,7 +75,7 @@ pub async fn get_blocks(
                 Ok(rpc_result)
             };
 
-            wrap_response(operation().await)
+            wrap_response(service_call().await)
         }
     }
 }
@@ -93,12 +86,12 @@ pub async fn get_block_time_series(
     query: web::Query<TimeRange>,
 ) -> impl Responder {
     let block_service = &state.block_service;
-    let mut operation = async move || -> Result<_, String> {
+    let mut service_call = async move || -> Result<_, String> {
         let db_result = block_service
             .get_timeseries(&mut ctx, query.from, query.to)
             .await
             .map_err(|e| format!("DB failed: {}", e))?;
         Ok(db_result)
     };
-    wrap_response(operation().await)
+    wrap_response(service_call().await)
 }

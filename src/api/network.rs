@@ -1,8 +1,8 @@
+use crate::configuration::Network;
+use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde::{Deserialize, Serialize};
-use crate::configuration::Network;
-use crate::AppState;
 
 #[derive(Debug, Deserialize)]
 pub struct SwitchNetworkRequest {

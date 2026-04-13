@@ -1,15 +1,8 @@
-use crate::domain::block::BlockInfo;
-use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
-use crate::db::block_repository::BlockRepository;
 use crate::db::scheduler_log_repository::SchedulerLogRepository;
-use crate::bitcoin::rpc::get_blocks_info;
+use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
 use crate::services::ExecutionCtx;
-use crate::AppState;
-use sqlx::{Error, PgConnection, PgPool};
+use sqlx::Error;
 use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::Mutex;
-use tokio::time;
 use uuid::Uuid;
 
 pub struct SchedulerLogService {
@@ -22,7 +15,7 @@ impl SchedulerLogService {
     }
 
     pub async fn create_log(
-        &self, ctx: &mut ExecutionCtx, description: &str,
+        &self, ctx: &mut ExecutionCtx, _description: &str,
     ) -> Result<Uuid, Error> {
         ctx.execute_in_transaction(async |tx| {
             let uuid = self.repo.create_log(tx, "On-chain blocks synchronization").await?;

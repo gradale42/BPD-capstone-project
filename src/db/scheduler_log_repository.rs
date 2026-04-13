@@ -1,6 +1,6 @@
 use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
 use async_trait::async_trait;
-use sqlx::{Error, PgConnection, PgPool};
+use sqlx::{Error, PgConnection};
 use uuid::Uuid;
 
 #[async_trait]

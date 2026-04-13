@@ -1,7 +1,7 @@
 use crate::configuration::Network;
 use crate::domain::block::BlockInfo;
+use crate::domain::mempool::MempoolTransaction;
 use crate::AppState;
-use actix_web::web;
 use bitcoincore_rpc::bitcoin::Address;
 use bitcoincore_rpc::json::{ImportDescriptors, Timestamp};
 use bitcoincore_rpc::{Auth, Client as BitcoinClient, Client, RpcApi};
@@ -304,4 +304,41 @@ pub fn get_block_details(
     });
 
     Ok(block_json)
+}
+
+pub fn get_mempool_transactions(client: &Client) -> Result<Vec<MempoolTransaction>, bitcoincore_rpc::Error> {
+    let mempool_txids = client.get_raw_mempool()?;
+    let mut transactions = Vec::new();
+
+    // Get details for each transaction
+    for txid in mempool_txids.iter().take(1000) {
+        // Limit to 1000 for performance
+        match client.get_mempool_entry(txid) {
+            Ok(entry) => {
+                // Calculate fee rate (satoshis per vbyte)
+                let fee_rate = if entry.vsize > 0 {
+                    entry.fees.base.to_sat() as f64 / entry.vsize as f64
+                } else {
+                    0.0
+                };
+
+                transactions.push(crate::domain::mempool::MempoolTransaction {
+                    txid: txid.to_string(),
+                    vsize: entry.vsize,
+                    weight: entry.weight.unwrap_or(0),
+                    time: entry.time,
+                    height: entry.height,
+                    fee: entry.fees.base.to_btc(),
+                    fee_rate,
+                    ancestor_count: entry.ancestor_count,
+                    descendant_count: entry.descendant_count,
+                    bip125_replaceable: entry.bip125_replaceable,
+                });
+            }
+            Err(e) => {
+                eprintln!("Error getting mempool entry for {}: {}", txid, e);
+            }
+        }
+    }
+    Ok(transactions)
 }

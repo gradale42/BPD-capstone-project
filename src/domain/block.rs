@@ -1,7 +1,7 @@
+use crate::configuration::Network;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use crate::configuration::Network;
 
 #[derive(Debug, Deserialize)]
 pub struct BlocksParams {

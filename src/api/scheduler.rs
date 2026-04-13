@@ -1,9 +1,10 @@
+use crate::api::wrap_response;
+use crate::services::ExecutionCtx;
 use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
-use crate::services::ExecutionCtx;
 
 #[derive(Debug, Deserialize)]
 pub struct StartSchedulerParams {
@@ -17,8 +18,7 @@ pub struct SchedulerStatus {
 }
 
 pub async fn start_scheduler(
-    state: web::Data<AppState>,
-    params: web::Query<StartSchedulerParams>,
+    state: web::Data<AppState>, params: web::Query<StartSchedulerParams>,
 ) -> impl Responder {
     let interval = params.interval_minutes.unwrap_or(1);
     let blocks_count = params.blocks_count.unwrap_or(100);
@@ -45,7 +45,6 @@ pub async fn stop_scheduler(state: web::Data<AppState>) -> impl Responder {
 
 pub async fn get_scheduler_status(state: web::Data<AppState>) -> impl Responder {
     let running = state.scheduler_service.is_running().await;
-
     HttpResponse::Ok().json(SchedulerStatus { running })
 }
 
@@ -65,77 +64,51 @@ pub struct DataTableResponse<T> {
 }
 
 pub async fn get_scheduler_logs(
-    state: web::Data<AppState>,
-    params: web::Query<LogsParams>,
+    state: web::Data<AppState>, mut ctx: ExecutionCtx, params: web::Query<LogsParams>,
 ) -> impl Responder {
     let length = params.length.unwrap_or(25) as i64;
     let start = params.start.unwrap_or(0) as i64;
 
-    let network = state.node_manager.get_current_network();
-    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
-        Ok(context) => context,
-        Err(e) => {
-            eprintln!("Failed to acquire DB connection: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
+    let scheduler_log_service = &state.scheduler_log_service;
+    let mut service_call = async move || -> Result<_, String> {
+        let total = scheduler_log_service
+            .count_logs(&mut ctx)
+            .await
+            .map_err(|e| format!("DB failed: {}", e))?;
+
+        let logs = scheduler_log_service
+            .list_logs(&mut ctx, length, start)
+            .await
+            .map_err(|e| format!("DB failed: {}", e))?;
+
+        let response = DataTableResponse {
+            draw: params.draw,
+            records_total: total as usize,
+            records_filtered: total as usize,
+            data: logs,
+        };
+
+        Ok(response)
     };
 
-    let total = match state.scheduler_log_service.count_logs(&mut ctx).await {
-        Ok(count) => count as usize,
-        Err(e) => {
-            eprintln!("Failed to count logs: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
-    };
-
-    let logs = match state.scheduler_log_service.list_logs(&mut ctx, length, start).await {
-        Ok(logs) => logs,
-        Err(e) => {
-            eprintln!("Failed to list logs: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
-    };
-
-    let response = DataTableResponse {
-        draw: params.draw,
-        records_total: total,
-        records_filtered: total,
-        data: logs,
-    };
-
-    HttpResponse::Ok().json(response)
+    wrap_response(service_call().await)
 }
 
 pub async fn get_scheduler_log(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: web::Data<AppState>, mut ctx: ExecutionCtx, path: web::Path<Uuid>,
 ) -> impl Responder {
     let id = path.into_inner();
 
-    let network = state.node_manager.get_current_network();
-    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
-        Ok(context) => context,
-        Err(e) => {
-            eprintln!("Failed to acquire DB connection: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
+    let scheduler_log_service = &state.scheduler_log_service;
+    let mut service_call = async move || -> Result<_, String> {
+
+        let log = scheduler_log_service
+            .get_log(&mut ctx, id)
+            .await
+            .map_err(|e| format!("DB failed: {}", e))?;
+
+        Ok(log)
     };
 
-    match state.scheduler_log_service.get_log(&mut ctx, id).await {
-        Ok(log) => HttpResponse::Ok().json(log),
-        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().json(json!({
-            "error": "Log not found"
-        })),
-        Err(e) => HttpResponse::InternalServerError().json(json!({
-            "error": format!("Database error: {}", e)
-        })),
-    }
+    wrap_response(service_call().await)
 }

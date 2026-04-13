@@ -1,8 +1,7 @@
 use crate::configuration::Network;
 use crate::domain::block::{BlockInfo, TimeseriesPoint};
 use async_trait::async_trait;
-use sqlx::{Error, PgConnection, PgPool};
-use uuid::{uuid, Uuid};
+use sqlx::{Error, PgConnection};
 
 #[async_trait]
 pub trait BlockRepository: Send + Sync {

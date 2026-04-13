@@ -9,13 +9,10 @@ pub mod indexer;
 pub mod live;
 pub mod network;
 
-use std::fmt::Display;
-use std::future::Future;
 use actix_web::{web, HttpResponse};
 use serde::Serialize;
 use serde_json::json;
-use crate::bitcoin::node_manager::BitcoinNodeManager;
-use crate::services::ExecutionCtx;
+use std::fmt::Display;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(

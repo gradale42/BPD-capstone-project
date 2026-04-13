@@ -1,10 +1,11 @@
-use actix_web::{web, HttpResponse, Responder};
-use bitcoincore_rpc::RpcApi;
-use serde_json::json;
-use std::fs;
-use crate::AppState;
+use crate::api::wrap_response;
+use crate::bitcoin::rpc;
 use crate::domain::mempool::{MempoolSnapshot, MempoolTimeRange};
 use crate::services::ExecutionCtx;
+use crate::AppState;
+use actix_web::{web, Responder};
+use bitcoincore_rpc::{Error, RpcApi};
+use serde_json::json;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MempoolParams {
@@ -29,237 +30,196 @@ pub struct MempoolTxsParams {
     pub order: Option<Vec<Vec<String>>>,
 }
 
-
 pub async fn get_mempool(
     state: web::Data<AppState>,
     web::Query(params): web::Query<MempoolParams>,
 ) -> impl Responder {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            let mempool_info = match client.get_mempool_info() {
-                Ok(info) => info,
-                Err(e) => {
-                    eprintln!("Error getting mempool info: {}", e);
-                    return HttpResponse::InternalServerError().json(json!({
-                        "error": format!("Failed to get mempool info: {}", e)
-                    }));
-                }
-            };
+    let node_manager = &state.node_manager;
 
-            let snapshot = MempoolSnapshot {
-                timestamp: chrono::Utc::now().to_rfc3339(),
-                tx_count: mempool_info.size as usize,
-                vbytes: mempool_info.bytes as usize,
-                total_fees: mempool_info.total_fee.unwrap().to_sat() as f64,
-                min_relay_feerate: mempool_info.min_relay_tx_fee.to_sat() as f64,
-            };
+    let service_call = async move || -> Result<_, String> {
+        let rpc_result = node_manager
+            .execute_rpc("", move |client| {
+                let mempool_info = client.get_mempool_info()?;
 
-            let response = DataTableResponse {
-                draw: params.draw,
-                records_total: 1,
-                records_filtered: 1,
-                data: vec![snapshot],
-            };
+                let snapshot = MempoolSnapshot {
+                    timestamp: chrono::Utc::now().to_rfc3339(),
+                    tx_count: mempool_info.size as usize,
+                    vbytes: mempool_info.bytes as usize,
+                    total_fees: mempool_info.total_fee.unwrap().to_sat() as f64,
+                    min_relay_feerate: mempool_info.min_relay_tx_fee.to_sat() as f64,
+                };
 
-            HttpResponse::Ok().json(response)
-        }
-        Err(e) => {
-            eprintln!("Error locking RPC client: {}", e);
-            HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to lock RPC client: {}", e)
-            }))
-        }
-    }
+                let response = DataTableResponse {
+                    draw: params.draw,
+                    records_total: 1,
+                    records_filtered: 1,
+                    data: vec![snapshot],
+                };
+
+                Ok(response)
+            })
+            .await
+            .map_err(|e| format!("RPC failed: {}", e))?;
+
+        Ok(rpc_result)
+    };
+
+    wrap_response(service_call().await)
 }
 
 pub async fn get_mempool_timeseries(
-    state: web::Data<AppState>,
-    query: web::Query<MempoolTimeRange>,
+    state: web::Data<AppState>, mut ctx: ExecutionCtx, query: web::Query<MempoolTimeRange>,
 ) -> impl Responder {
-    let network = state.node_manager.get_current_network();
-    let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
-        Ok(context) => context,
-        Err(e) => {
-            eprintln!("Failed to acquire DB connection: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Database error: {}", e)
-            }));
-        }
+    let mempool_metrics_service = &state.mempool_metrics_service;
+    let mut operation = async move || -> Result<_, String> {
+        let db_result = mempool_metrics_service
+            .get_timeseries(&mut ctx, query.from, query.to)
+            .await
+            .map_err(|e| format!("DB failed: {}", e))?;
+        Ok(db_result)
     };
-
-    match state.mempool_metrics_service.get_timeseries(&mut ctx, query.from, query.to).await {
-        Ok(points) => {
-            println!("Mempool timeseries: found {} points", points.len());
-            HttpResponse::Ok().json(points)
-        },
-        Err(e) => {
-            eprintln!("Mempool timeseries error: {}", e);
-            HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to fetch mempool timeseries: {}", e)
-            }))
-        }
-    }
+    wrap_response(operation().await)
 }
-
-
 
 pub async fn get_mempool_transactions(
-    state: web::Data<AppState>,
-    web::Query(params): web::Query<crate::api::mempool::MempoolTxsParams>,
+    state: web::Data<AppState>, web::Query(params): web::Query<MempoolTxsParams>,
 ) -> impl Responder {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            // Get all mempool transaction IDs
-            let mempool_txids = match client.get_raw_mempool() {
-                Ok(txids) => txids,
-                Err(e) => {
-                    eprintln!("Error getting mempool transactions: {}", e);
-                    return HttpResponse::InternalServerError().json(json!({
-                        "error": format!("Failed to get mempool transactions: {}", e)
-                    }));
-                }
-            };
+    let node_manager = &state.node_manager;
 
-            let mut transactions = Vec::new();
+    let service_call = async move || -> Result<_, String> {
+        let rpc_result = node_manager
+            .execute_rpc("", move |client| {
+                let mut transactions = rpc::get_mempool_transactions(client)?;
 
-            // Get details for each transaction
-            for txid in mempool_txids.iter().take(1000) { // Limit to 1000 for performance
-                match client.get_mempool_entry(txid) {
-                    Ok(entry) => {
-                        // Calculate fee rate (satoshis per vbyte)
-                        let fee_rate = if entry.vsize > 0 {
-                            entry.fees.base.to_sat() as f64 / entry.vsize as f64
-                        } else {
-                            0.0
-                        };
+                // Apply sorting if specified
+                if let Some(order) = params.order {
+                    if let Some(first_order) = order.first() {
+                        if first_order.len() >= 2 {
+                            let column_idx = first_order[0].parse::<usize>().unwrap_or(5);
+                            let direction = &first_order[1];
 
-                        transactions.push(crate::domain::mempool::MempoolTransaction {
-                            txid: txid.to_string(),
-                            vsize: entry.vsize,
-                            weight: entry.weight.unwrap_or(0),
-                            time: entry.time,
-                            height: entry.height,
-                            fee: entry.fees.base.to_btc(),
-                            fee_rate: fee_rate,
-                            ancestor_count: entry.ancestor_count,
-                            descendant_count: entry.descendant_count,
-                            bip125_replaceable: entry.bip125_replaceable,
-                        });
-                    }
-                    Err(e) => {
-                        eprintln!("Error getting mempool entry for {}: {}", txid, e);
-                    }
-                }
-            }
-
-            // Apply sorting if specified
-            if let Some(order) = params.order {
-                if let Some(first_order) = order.first() {
-                    if first_order.len() >= 2 {
-                        let column_idx = first_order[0].parse::<usize>().unwrap_or(5);
-                        let direction = &first_order[1];
-
-                        match column_idx {
-                            0 => transactions.sort_by(|a, b| if direction == "asc" { a.txid.cmp(&b.txid) } else { b.txid.cmp(&a.txid) }),
-                            1 => transactions.sort_by(|a, b| if direction == "asc" { a.vsize.cmp(&b.vsize) } else { b.vsize.cmp(&a.vsize) }),
-                            2 => transactions.sort_by(|a, b| if direction == "asc" { a.weight.cmp(&b.weight) } else { b.weight.cmp(&a.weight) }),
-                            3 => transactions.sort_by(|a, b| if direction == "asc" { a.time.cmp(&b.time) } else { b.time.cmp(&a.time) }),
-                            4 => transactions.sort_by(|a, b| if direction == "asc" { a.height.cmp(&b.height) } else { b.height.cmp(&a.height) }),
-                            5 => transactions.sort_by(|a, b| if direction == "asc" { a.fee_rate.partial_cmp(&b.fee_rate).unwrap() } else { b.fee_rate.partial_cmp(&a.fee_rate).unwrap() }),
-                            _ => transactions.sort_by(|a, b| b.fee_rate.partial_cmp(&a.fee_rate).unwrap()),
+                            match column_idx {
+                                0 => transactions.sort_by(|a, b| {
+                                    if direction == "asc" {
+                                        a.txid.cmp(&b.txid)
+                                    } else {
+                                        b.txid.cmp(&a.txid)
+                                    }
+                                }),
+                                1 => transactions.sort_by(|a, b| {
+                                    if direction == "asc" {
+                                        a.vsize.cmp(&b.vsize)
+                                    } else {
+                                        b.vsize.cmp(&a.vsize)
+                                    }
+                                }),
+                                2 => transactions.sort_by(|a, b| {
+                                    if direction == "asc" {
+                                        a.weight.cmp(&b.weight)
+                                    } else {
+                                        b.weight.cmp(&a.weight)
+                                    }
+                                }),
+                                3 => transactions.sort_by(|a, b| {
+                                    if direction == "asc" {
+                                        a.time.cmp(&b.time)
+                                    } else {
+                                        b.time.cmp(&a.time)
+                                    }
+                                }),
+                                4 => transactions.sort_by(|a, b| {
+                                    if direction == "asc" {
+                                        a.height.cmp(&b.height)
+                                    } else {
+                                        b.height.cmp(&a.height)
+                                    }
+                                }),
+                                5 => transactions.sort_by(|a, b| {
+                                    if direction == "asc" {
+                                        a.fee_rate.partial_cmp(&b.fee_rate).unwrap()
+                                    } else {
+                                        b.fee_rate.partial_cmp(&a.fee_rate).unwrap()
+                                    }
+                                }),
+                                _ => transactions
+                                    .sort_by(|a, b| b.fee_rate.partial_cmp(&a.fee_rate).unwrap()),
+                            }
                         }
                     }
+                } else {
+                    // Default sort by fee rate (highest first)
+                    transactions.sort_by(|a, b| b.fee_rate.partial_cmp(&a.fee_rate).unwrap());
                 }
-            } else {
-                // Default sort by fee rate (highest first)
-                transactions.sort_by(|a, b| b.fee_rate.partial_cmp(&a.fee_rate).unwrap());
-            }
 
-            // Apply pagination
-            let start = params.start.unwrap_or(0) as usize;
-            let length = params.length.unwrap_or(25) as usize;
-            let end = std::cmp::min(start + length, transactions.len());
+                // Apply pagination
+                let start = params.start.unwrap_or(0) as usize;
+                let length = params.length.unwrap_or(25) as usize;
+                let end = std::cmp::min(start + length, transactions.len());
 
-            // Исправлено: используем slice и clone или просто создаем новый Vec
-            let paginated_data = if start < transactions.len() {
-                transactions[start..end].to_vec()
-            } else {
-                Vec::new()
-            };
+                let paginated_data = if start < transactions.len() {
+                    transactions[start..end].to_vec()
+                } else {
+                    Vec::new()
+                };
 
-            let response = crate::api::mempool::DataTableResponse {
-                draw: params.draw,
-                records_total: transactions.len(),
-                records_filtered: transactions.len(),
-                data: paginated_data,
-            };
+                let response = DataTableResponse {
+                    draw: params.draw,
+                    records_total: transactions.len(),
+                    records_filtered: transactions.len(),
+                    data: paginated_data,
+                };
 
-            HttpResponse::Ok().json(response)
-        }
-        Err(e) => {
-            eprintln!("Error locking RPC client: {}", e);
-            HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to lock RPC client: {}", e)
-            }))
-        }
-    }
+                Ok(response)
+            })
+            .await
+            .map_err(|e| format!("RPC failed: {}", e))?;
+
+        Ok(rpc_result)
+    };
+
+    wrap_response(service_call().await)
 }
 
-pub async fn get_mempool_stats(
-    state: web::Data<AppState>,
-) -> impl Responder {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            let mempool_info = match client.get_mempool_info() {
-                Ok(info) => info,
-                Err(e) => {
-                    eprintln!("Error getting mempool info: {}", e);
-                    return HttpResponse::InternalServerError().json(json!({
-                        "error": format!("Failed to get mempool info: {}", e)
-                    }));
-                }
-            };
+pub async fn get_mempool_stats(state: web::Data<AppState>) -> impl Responder {
+    let node_manager = &state.node_manager;
 
-            HttpResponse::Ok().json(json!({
-                "tx_count": mempool_info.size,
-                "vbytes": mempool_info.bytes,
-                "total_fees": mempool_info.total_fee.unwrap_or_default().to_btc(),
-                "min_relay_feerate": mempool_info.min_relay_tx_fee.to_sat(),
-            }))
-        }
-        Err(e) => {
-            eprintln!("Error locking RPC client: {}", e);
-            HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to lock RPC client: {}", e)
-            }))
-        }
-    }
+    let service_call = async move || -> Result<_, String> {
+        let rpc_result = node_manager
+            .execute_rpc("", move |client| {
+                let mempool_info = client.get_mempool_info()?;
+                Ok(json!({
+                    "tx_count": mempool_info.size,
+                    "vbytes": mempool_info.bytes,
+                    "total_fees": mempool_info.total_fee.unwrap_or_default().to_btc(),
+                    "min_relay_feerate": mempool_info.min_relay_tx_fee.to_sat(),
+                }))
+            })
+            .await
+            .map_err(|e| format!("RPC failed: {}", e))?;
+
+        Ok(rpc_result)
+    };
+
+    wrap_response(service_call().await)
 }
 
 pub async fn get_transaction_details(
-    state: web::Data<AppState>,
-    path: web::Path<String>,
+    state: web::Data<AppState>, path: web::Path<String>,
 ) -> impl Responder {
     let txid = path.into_inner();
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            let txid_parsed = match txid.parse::<bitcoin::Txid>() {
-                Ok(t) => t,
-                Err(e) => {
-                    return HttpResponse::BadRequest().json(json!({
-                        "error": format!("Invalid txid: {}", e)
-                    }));
-                }
-            };
+    let node_manager = &state.node_manager;
 
-            // Try to get from mempool first
-            if let Ok(entry) = client.get_mempool_entry(&txid_parsed) {
-                return HttpResponse::Ok().json(json!({
-                    "txid": txid,
+    let service_call = async move || -> Result<_, String> {
+        let rpc_result = node_manager
+            .execute_rpc("", move |client| {
+                let txid_parsed = txid.parse::<bitcoin::Txid>().map_err(|e| {
+                    Error::Io(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        format!("Invalid TXID format: {}", e)
+                    ))
+                })?;
+                let entry = client.get_mempool_entry(&txid_parsed)?;
+                Ok(json!({
                     "time": entry.time,
                     "height": entry.height,
                     "fee_rate": entry.fees.base.to_sat() as f64 / entry.vsize as f64,
@@ -272,29 +232,13 @@ pub async fn get_transaction_details(
                         "base": entry.fees.base.to_btc(),
                         "modified": entry.fees.modified.to_btc(),
                     }
-                }));
-            }
+                }))
+            })
+            .await
+            .map_err(|e| format!("RPC failed: {}", e))?;
 
-            // If not in mempool, try to get from blockchain
-            match client.get_transaction(&txid_parsed, None) {
-                Ok(tx) => {
-                    HttpResponse::Ok().json(json!({
-                        "txid": txid,
-                        "in_block": true,
-                        "details": format!("{:?}", tx)
-                    }))
-                }
-                Err(e) => {
-                    HttpResponse::NotFound().json(json!({
-                        "error": format!("Transaction not found: {}", e)
-                    }))
-                }
-            }
-        }
-        Err(e) => {
-            HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to lock RPC client: {}", e)
-            }))
-        }
-    }
+        Ok(rpc_result)
+    };
+
+    wrap_response(service_call().await)
 }

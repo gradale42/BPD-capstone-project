@@ -1,43 +1,9 @@
+use crate::domain::address::{AddressInfo, DescriptorInfo};
+use crate::domain::wallet::WalletInfo;
+use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::{Client, RpcApi};
 use serde_json::{json, Value};
-use crate::AppState;
-
-#[derive(Debug, serde::Serialize)]
-pub struct WalletInfo {
-    pub name: String,
-    pub balance: f64,
-    pub address_count: usize,
-    pub addresses: Vec<AddressInfo>,
-}
-
-impl WalletInfo {
-    fn default_with_name(name: String) -> Self {
-        Self {
-            name,
-            balance: 0.0,
-            address_count: 0,
-            addresses: vec![],
-        }
-    }
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct AddressInfo {
-    pub address: String,
-    pub balance: f64,
-    pub label: Option<String>,
-    pub received: f64,
-    pub spent: f64,
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct DescriptorInfo {
-    pub descriptor: String,
-    pub active: bool,
-    pub range: Option<Vec<u64>>,
-    pub timestamp: u64,
-}
 
 pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
     // 1. Get the list of names using the default client

@@ -1,17 +1,9 @@
-use crate::domain::block::BlockInfo;
-use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
-use crate::db::block_repository::BlockRepository;
-use crate::db::scheduler_log_repository::SchedulerLogRepository;
-use crate::bitcoin::rpc::get_blocks_info;
+#![allow(unused)]
+
 use crate::AppState;
-use sqlx::{Error, PgConnection, PgPool};
 use std::sync::Arc;
 use std::time::Duration;
-use bitcoincore_rpc::RpcApi;
-use tokio::sync::Mutex;
 use tokio::time;
-use uuid::Uuid;
-use crate::services::ExecutionCtx;
 
 #[derive()]
 pub struct SchedulerService {
@@ -79,14 +71,12 @@ impl SchedulerService {
     async fn run_blockchain_sync(state: &AppState, blocks_count: u64) {
         println!("Saving blocks...");
 
+        /*
         let network = state.node_manager.get_current_network();
-        let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
-            Ok(context) => context,
-            Err(e) => {
-                eprintln!("Failed to acquire DB connection: {}", e);
-                return;
-            }
-        };
+        let mut ctx =  ExecutionCtx::from_state(&state).await.unwrap_or_else(|e| {;
+            eprintln!("Failed to acquire DB connection for block sync: {}", e);
+            panic!("Cannot continue without DB connection");
+        });
 
         let log_id = match state.scheduler_log_service.create_log(&mut ctx, "On-chain blocks synchronization").await {
             Ok(id) => id,
@@ -145,12 +135,12 @@ impl SchedulerService {
             } else {
                 println!("Sync completed: saved {}, skipped {}", result.saved, result.skipped);
             }
-        }
+        } */
     }
 
     async fn run_mempool_sync(state: &AppState) {
         println!("Saving mempool...");
-
+/*
         let network = state.node_manager.get_current_network();
         let mut ctx = match ExecutionCtx::new(&state.db_pool, network).await {
             Ok(context) => context,
@@ -235,5 +225,8 @@ impl SchedulerService {
         } else {
             println!("Mempool metrics saved successfully");
         }
+
+
+ */
     }
 }

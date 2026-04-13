@@ -1,4 +1,4 @@
-#![allow(unused)]
+//#![allow(unused)]
 
 pub mod domain;
 pub mod configuration;
@@ -8,25 +8,25 @@ pub mod db;
 pub mod indexer;
 pub mod bitcoin;
 
+use crate::configuration::ALL_BITCOIN_NETWORKS;
+use crate::db::mempool_metrics_repository::PostgresMempoolMetricsRepository;
+use crate::db::{
+    PostgresBlockRepository,
+    PostgresSchedulerLogRepository,
+};
+use crate::indexer::scheduler::SchedulerService;
+use crate::services::block_service::BlockService;
+use crate::services::mempool_metrics_service::MempoolMetricsService;
+use crate::services::scheduler_log_service::SchedulerLogService;
 use actix_files as actix_fs;
+use actix_web::dev::Server;
+use actix_web::{web, App, HttpServer};
+use bitcoin::node_manager::BitcoinNodeManager;
+use configuration::{get_configuration, BitcoinNodeConfig, Network};
+use sqlx::PgPool;
+use std::collections::HashMap;
 use std::net::TcpListener;
 use std::sync::Arc;
-use std::collections::HashMap;
-use actix_web::{web, App, HttpServer};
-use actix_web::dev::Server;
-use sqlx::PgPool;
-use configuration::{get_configuration, BitcoinNodeConfig, Network};
-use bitcoin::node_manager::BitcoinNodeManager;
-use crate::configuration::ALL_BITCOIN_NETWORKS;
-use crate::services::block_service::BlockService;
-use crate::services::scheduler_log_service::SchedulerLogService;
-use crate::db::{
-    BlockRepository, PostgresBlockRepository,
-    PostgresSchedulerLogRepository, SchedulerLogRepository,
-};
-use crate::db::mempool_metrics_repository::PostgresMempoolMetricsRepository;
-use crate::services::mempool_metrics_service::MempoolMetricsService;
-use crate::indexer::scheduler::SchedulerService;
 
 pub struct AppState {
     pub node_manager: Arc<BitcoinNodeManager>,

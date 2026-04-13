@@ -1,7 +1,6 @@
-use crate::api::blocks::DataTableResponse;
 use crate::api::wrap_response;
 use crate::bitcoin::rpc::{
-    get_blocks_info, get_mempool_tx_count, get_network_hashrate, get_peer_count,
+    get_blocks_info,
     import_descriptors, setup_mining_address,
 };
 use crate::services::ExecutionCtx;
@@ -9,7 +8,6 @@ use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
-use std::error::Error;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MineParams {
@@ -18,10 +16,10 @@ pub struct MineParams {
 
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
-    let mut service_call = async move || -> Result<_, String> {
+    let service_call = async move || -> Result<_, String> {
         let rpc_result = node_manager
             .execute_rpc("student_wallet", move |client| {
-                import_descriptors(client);
+                let _ = import_descriptors(client);
                 Ok(())
             })
             .await
@@ -43,7 +41,7 @@ pub async fn mine_blocks_handler(
     }
 
     let node_manager = &state.node_manager;
-    let mut service_call = async move || -> Result<_, String> {
+    let service_call = async move || -> Result<_, String> {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mining_address = setup_mining_address(client).unwrap();

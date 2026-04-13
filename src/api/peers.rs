@@ -1,27 +1,14 @@
-use actix_web::{web, HttpResponse, Responder};
-use bitcoincore_rpc::RpcApi;
-use serde_json::json;
-use std::fs;
+use crate::api::wrap_response;
+use crate::domain::peers::PeerInfo;
 use crate::AppState;
+use actix_web::{web, Responder};
+use bitcoincore_rpc::RpcApi;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct PeersParams {
     pub draw: i32,
     pub start: Option<i32>,
     pub length: Option<i32>,
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct PeerInfo {
-    pub peer_id: u64,
-    pub inbound: bool,
-    pub subver: String,
-    pub version: u64,
-    pub bytes_sent_total: u64,
-    pub bytes_recv_total: u64,
-    pub bytes_sent_delta: u64,
-    pub bytes_recv_delta: u64,
-    pub ping: f64,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -36,49 +23,42 @@ pub async fn get_peers(
     state: web::Data<AppState>,
     web::Query(params): web::Query<PeersParams>,
 ) -> impl Responder {
-    let self1 = &state.node_manager;
-    match self1.get_default_current_client().lock() {
-        Ok(client) => {
-            
-            let peers_raw = match client.get_peer_info() {
-                Ok(peers) => peers,
-                Err(e) => {
-                    eprintln!("Error getting peer info: {}", e);
-                    return HttpResponse::InternalServerError().json(json!({
-                        "error": format!("Failed to get peer info: {}", e)
-                    }));
+
+    let node_manager = &state.node_manager;
+
+    let service_call = async move || -> Result<_, String> {
+        let rpc_result = node_manager
+            .execute_rpc("", move |client| {
+                let peers_raw =  client.get_peer_info()?;
+                let mut peers = Vec::new();
+                for peer in peers_raw {
+                    peers.push(PeerInfo {
+                        peer_id: peer.id,
+                        inbound: peer.inbound,
+                        subver: peer.subver.clone(),
+                        version: peer.version,
+                        bytes_sent_total: peer.bytessent,
+                        bytes_recv_total: peer.bytesrecv,
+                        bytes_sent_delta: 0,
+                        bytes_recv_delta: 0,
+                        ping: peer.pingtime.unwrap_or(0.0) * 1000.0, // Convert to ms
+                    });
                 }
-            };
 
-            let mut peers = Vec::new();
-            for peer in peers_raw {
-                peers.push(PeerInfo {
-                    peer_id: peer.id,
-                    inbound: peer.inbound,
-                    subver: peer.subver.clone(),
-                    version: peer.version,
-                    bytes_sent_total: peer.bytessent,
-                    bytes_recv_total: peer.bytesrecv,
-                    bytes_sent_delta: 0,
-                    bytes_recv_delta: 0,
-                    ping: peer.pingtime.unwrap_or(0.0) * 1000.0, // Convert to ms
-                });
-            }
+                let response = DataTableResponse {
+                    draw: params.draw,
+                    records_total: peers.len(),
+                    records_filtered: peers.len(),
+                    data: peers,
+                };
 
-            let response = DataTableResponse {
-                draw: params.draw,
-                records_total: peers.len(),
-                records_filtered: peers.len(),
-                data: peers,
-            };
+                Ok(response)
+            })
+            .await
+            .map_err(|e| format!("RPC failed: {}", e))?;
 
-            HttpResponse::Ok().json(response)
-        }
-        Err(e) => {
-            eprintln!("Error locking RPC client: {}", e);
-            HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to lock RPC client: {}", e)
-            }))
-        }
-    }
+        Ok(rpc_result)
+    };
+
+    wrap_response(service_call().await)
 }

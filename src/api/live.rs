@@ -1,16 +1,15 @@
 use crate::api::wrap_response;
 use crate::bitcoin::rpc::{
-    get_blocks_info, get_mempool_tx_count, get_network_hashrate, get_peer_count,
+    get_mempool_tx_count, get_network_hashrate, get_peer_count,
 };
 use crate::AppState;
-use actix_web::{web, HttpResponse, Responder};
-use futures::TryFutureExt;
+use actix_web::{web, Responder};
 use serde_json::json;
 
 pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
 
-    let mut operation = async move || -> Result<_, String> {
+    let service_call = async move || -> Result<_, String> {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mempool_count = get_mempool_tx_count(client).unwrap_or(0);
@@ -29,5 +28,5 @@ pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
         Ok(rpc_result)
     };
 
-    wrap_response(operation().await)
+    wrap_response(service_call().await)
 }

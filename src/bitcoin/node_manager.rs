@@ -1,8 +1,8 @@
+use crate::configuration::{BitcoinNodeConfig, Network};
 use bitcoincore_rpc::{Auth, Client};
 use dashmap::DashMap;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use crate::configuration::{Network, BitcoinNodeConfig};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ClientKey {

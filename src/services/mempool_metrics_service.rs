@@ -1,11 +1,10 @@
-use crate::configuration::Network;
-use crate::domain::mempool::{MempoolMetrics, MempoolMetricsPoint};
 use crate::db::mempool_metrics_repository::MempoolMetricsRepository;
+use crate::domain::mempool::{MempoolMetrics, MempoolMetricsPoint};
 use crate::services::ExecutionCtx;
+use chrono::Utc;
 use sqlx::Error;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Utc;
 
 pub struct MempoolMetricsService {
     repo: Arc<dyn MempoolMetricsRepository + Send + Sync>,

@@ -1,3 +1,6 @@
 pub mod block;
-pub(crate) mod scheduler_log;
-pub(crate) mod mempool;
+pub mod scheduler_log;
+pub mod mempool;
+pub mod peers;
+pub mod wallet;
+pub mod address;

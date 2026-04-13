@@ -1,9 +1,9 @@
-use std::future::Future;
-use sqlx::{Acquire, Postgres};
-use sqlx::pool::PoolConnection;
-use crate::AppState;
 use crate::configuration::Network;
-use actix_web::{FromRequest, HttpRequest, dev::Payload, error::ErrorInternalServerError};
+use crate::AppState;
+use actix_web::{dev::Payload, error::ErrorInternalServerError, FromRequest, HttpRequest};
+use sqlx::pool::PoolConnection;
+use sqlx::{Acquire, Postgres};
+use std::future::Future;
 use std::pin::Pin;
 
 pub mod block_service;
