@@ -9,16 +9,16 @@ pub async fn get_block_by_hash(
     let hash = block_hash.into_inner();
 
     let node_manager = &state.node_manager;
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 get_block_details(client, hash)
             })
             .await
             .map_err(|e| format!("RPC failed: {}", e));
-        rpc_result
-    };
+        Ok(rpc_result)
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }
 

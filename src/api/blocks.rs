@@ -43,22 +43,22 @@ pub async fn get_blocks(
             };
 
             let block_service = &state.block_service;
-            let mut service_call = async move || -> Result<_, String> {
+            let service_call: Result<_, String> = async {
                 let db_result = block_service
                     .get_blocks_from_db(&mut ctx, length as i64, start as i64, &order_by)
                     .await
                     .map_err(|e| format!("DB failed: {}", e))?;
                 Ok(db_result)
-            };
+            }.await;
 
-            wrap_response(service_call().await)
+            wrap_response(service_call)
         }
         _ => {
             // Live mode (RPC)
             let node_manager = &state.node_manager;
             let network = state.node_manager.get_current_network();
 
-            let service_call = async move || -> Result<_, String> {
+            let service_call: Result<_, String> = async {
                 let rpc_result = node_manager
                     .execute_rpc("", move |client| {
                         let blocks = get_blocks_info(client, network, Some(length))?;
@@ -73,9 +73,9 @@ pub async fn get_blocks(
                     .await
                     .map_err(|e| format!("RPC failed: {}", e))?;
                 Ok(rpc_result)
-            };
+            }.await;
 
-            wrap_response(service_call().await)
+            wrap_response(service_call)
         }
     }
 }
@@ -86,12 +86,12 @@ pub async fn get_block_time_series(
     query: web::Query<TimeRange>,
 ) -> impl Responder {
     let block_service = &state.block_service;
-    let mut service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let db_result = block_service
             .get_timeseries(&mut ctx, query.from, query.to)
             .await
             .map_err(|e| format!("DB failed: {}", e))?;
-        Ok(db_result)
-    };
-    wrap_response(service_call().await)
+          Ok(db_result)
+    }.await;
+    wrap_response(service_call)
 }

@@ -70,7 +70,7 @@ pub async fn get_scheduler_logs(
     let start = params.start.unwrap_or(0) as i64;
 
     let scheduler_log_service = &state.scheduler_log_service;
-    let mut service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let total = scheduler_log_service
             .count_logs(&mut ctx)
             .await
@@ -89,9 +89,9 @@ pub async fn get_scheduler_logs(
         };
 
         Ok(response)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }
 
 pub async fn get_scheduler_log(
@@ -100,15 +100,13 @@ pub async fn get_scheduler_log(
     let id = path.into_inner();
 
     let scheduler_log_service = &state.scheduler_log_service;
-    let mut service_call = async move || -> Result<_, String> {
-
+    let service_call: Result<_, String> = async {
         let log = scheduler_log_service
             .get_log(&mut ctx, id)
             .await
             .map_err(|e| format!("DB failed: {}", e))?;
-
         Ok(log)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }

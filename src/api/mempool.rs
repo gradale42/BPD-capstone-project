@@ -36,7 +36,7 @@ pub async fn get_mempool(
 ) -> impl Responder {
     let node_manager = &state.node_manager;
 
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mempool_info = client.get_mempool_info()?;
@@ -62,23 +62,23 @@ pub async fn get_mempool(
             .map_err(|e| format!("RPC failed: {}", e))?;
 
         Ok(rpc_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }
 
 pub async fn get_mempool_timeseries(
     state: web::Data<AppState>, mut ctx: ExecutionCtx, query: web::Query<MempoolTimeRange>,
 ) -> impl Responder {
     let mempool_metrics_service = &state.mempool_metrics_service;
-    let mut operation = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let db_result = mempool_metrics_service
             .get_timeseries(&mut ctx, query.from, query.to)
             .await
             .map_err(|e| format!("DB failed: {}", e))?;
-        Ok(db_result)
-    };
-    wrap_response(operation().await)
+          Ok(db_result)
+    }.await;
+    wrap_response(service_call)
 }
 
 pub async fn get_mempool_transactions(
@@ -86,7 +86,7 @@ pub async fn get_mempool_transactions(
 ) -> impl Responder {
     let node_manager = &state.node_manager;
 
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mut transactions = rpc::get_mempool_transactions(client)?;
@@ -175,15 +175,15 @@ pub async fn get_mempool_transactions(
             .map_err(|e| format!("RPC failed: {}", e))?;
 
         Ok(rpc_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }
 
 pub async fn get_mempool_stats(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
 
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mempool_info = client.get_mempool_info()?;
@@ -198,9 +198,9 @@ pub async fn get_mempool_stats(state: web::Data<AppState>) -> impl Responder {
             .map_err(|e| format!("RPC failed: {}", e))?;
 
         Ok(rpc_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }
 
 pub async fn get_transaction_details(
@@ -209,7 +209,7 @@ pub async fn get_transaction_details(
     let txid = path.into_inner();
     let node_manager = &state.node_manager;
 
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let txid_parsed = txid.parse::<bitcoin::Txid>().map_err(|e| {
@@ -238,7 +238,7 @@ pub async fn get_transaction_details(
             .map_err(|e| format!("RPC failed: {}", e))?;
 
         Ok(rpc_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }

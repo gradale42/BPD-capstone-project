@@ -26,7 +26,7 @@ pub async fn get_peers(
 
     let node_manager = &state.node_manager;
 
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let peers_raw =  client.get_peer_info()?;
@@ -58,7 +58,7 @@ pub async fn get_peers(
             .map_err(|e| format!("RPC failed: {}", e))?;
 
         Ok(rpc_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }

@@ -9,7 +9,7 @@ use serde_json::json;
 pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
 
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mempool_count = get_mempool_tx_count(client).unwrap_or(0);
@@ -26,7 +26,7 @@ pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
             .map_err(|e| format!("RPC failed: {}", e))?;
 
         Ok(rpc_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }

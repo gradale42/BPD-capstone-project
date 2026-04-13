@@ -16,7 +16,7 @@ pub struct MineParams {
 
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("student_wallet", move |client| {
                 let _ = import_descriptors(client);
@@ -24,9 +24,9 @@ pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Resp
             })
             .await
             .map_err(|e| format!("RPC failed: {}", e));
-        rpc_result
-    };
-    wrap_response(service_call().await)
+        Ok(rpc_result)
+    }.await;
+    wrap_response(service_call)
 }
 
 pub async fn mine_blocks_handler(
@@ -41,7 +41,7 @@ pub async fn mine_blocks_handler(
     }
 
     let node_manager = &state.node_manager;
-    let service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mining_address = setup_mining_address(client).unwrap();
@@ -56,9 +56,9 @@ pub async fn mine_blocks_handler(
             .map_err(|e| format!("RPC failed: {}", e))?;
 
         Ok(rpc_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }
 pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> impl Responder {
     const DEFAULT_COUNT: u64 = 500;
@@ -67,7 +67,7 @@ pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> i
     let block_service = &state.block_service;
     let network = state.node_manager.get_current_network();
 
-    let mut service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let blocks =
@@ -83,7 +83,7 @@ pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> i
             .map_err(|e| format!("DB failed: {}", e))?;
 
         Ok(db_result)
-    };
+    }.await;
 
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }

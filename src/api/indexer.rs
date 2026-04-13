@@ -9,12 +9,12 @@ pub async fn get_indexer_stats(
 ) -> impl Responder {
 
     let block_service = &state.block_service;
-    let mut service_call = async move || -> Result<_, String> {
+    let service_call: Result<_, String> = async {
         let last_block_index = block_service.get_last_block_height(&mut ctx)
             .await
             .map_err(|e| format!("DB failed: {}", e))?;
         Ok(last_block_index)
-    };
+    }.await;
     
-    wrap_response(service_call().await)
+    wrap_response(service_call)
 }
