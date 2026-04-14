@@ -4,12 +4,13 @@ use crate::bitcoin::rpc::{
 };
 use crate::AppState;
 use actix_web::{web, Responder};
+use anyhow::Context;
 use serde_json::json;
 
 pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
 
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mempool_count = get_mempool_tx_count(client).unwrap_or(0);
@@ -23,10 +24,10 @@ pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
                 }))
             })
             .await
-            .map_err(|e| format!("RPC failed: {}", e))?;
+            .context("Failed to read node metrics")?;
 
         Ok(rpc_result)
     }.await;
 
-    wrap_response(service_call)
+    wrap_response(result)
 }

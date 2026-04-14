@@ -1,4 +1,5 @@
 use crate::configuration::{BitcoinNodeConfig, Network};
+use crate::AppError;
 use bitcoincore_rpc::{Auth, Client};
 use dashmap::DashMap;
 use std::collections::HashMap;
@@ -27,7 +28,9 @@ pub struct BitcoinNodeManager {
 }
 
 impl BitcoinNodeManager {
-    pub fn new(network_configs: HashMap<Network, BitcoinNodeConfig>, default_network: Network) -> Self {
+    pub fn new(
+        network_configs: HashMap<Network, BitcoinNodeConfig>, default_network: Network,
+    ) -> Self {
         Self {
             clients: DashMap::new(),
             network_configs,
@@ -49,35 +52,44 @@ impl BitcoinNodeManager {
         let network = self.get_current_network();
         let key = ClientKey::new(network, wallet_name.to_string());
 
-        self.clients.entry(key.clone()).or_insert_with(|| {
-            println!("=== Creating Bitcoin client for network: {}, wallet: {} ===",
-                     network, if wallet_name.is_empty() { "default" } else { wallet_name });
+        self.clients
+            .entry(key.clone())
+            .or_insert_with(|| {
+                println!(
+                    "=== Creating Bitcoin client for network: {}, wallet: {} ===",
+                    network,
+                    if wallet_name.is_empty() { "default" } else { wallet_name }
+                );
 
-            let config = self.network_configs.get(&network).expect(&format!(
-                "No configuration found for network: {}", network
-            ));
+                let config = self
+                    .network_configs
+                    .get(&network)
+                    .expect(&format!("No configuration found for network: {}", network));
 
-            let wallet_url = if wallet_name.is_empty() {
-                config.rpc_url.clone()
-            } else {
-                format!("{}/wallet/{}", config.rpc_url, wallet_name)
-            };
+                let wallet_url = if wallet_name.is_empty() {
+                    config.rpc_url.clone()
+                } else {
+                    format!("{}/wallet/{}", config.rpc_url, wallet_name)
+                };
 
-            let auth = Auth::UserPass(config.rpc_user.clone(), config.rpc_password.clone());
+                let auth = Auth::UserPass(config.rpc_user.clone(), config.rpc_password.clone());
 
-            let client = Client::new(&wallet_url, auth)
-                .expect(&format!("Failed to create Bitcoin RPC client for network {} wallet {}",
-                                 network, wallet_name));
+                let client = Client::new(&wallet_url, auth).expect(&format!(
+                    "Failed to create Bitcoin RPC client for network {} wallet {}",
+                    network, wallet_name
+                ));
 
-            Arc::new(Mutex::new(client))
-        }).value().clone()
+                Arc::new(Mutex::new(client))
+            })
+            .value()
+            .clone()
     }
 
     pub fn get_default_current_client(&self) -> Arc<Mutex<Client>> {
         self.get_current_client("")
     }
 
-    pub async fn execute_rpc<F, R>(&self, wallet_name: &str, f: F) -> Result<R, String>
+    pub async fn execute_rpc<F, R>(&self, wallet_name: &str, f: F) -> Result<R, AppError>
     where
         F: FnOnce(&bitcoincore_rpc::Client) -> Result<R, bitcoincore_rpc::Error> + Send + 'static,
         R: serde::Serialize + Send + 'static,
@@ -85,15 +97,16 @@ impl BitcoinNodeManager {
         let client_arc = self.get_current_client(wallet_name);
 
         let result = tokio::task::spawn_blocking(move || {
-            let client_guard = client_arc.lock().map_err(|_| "Lock poisoning error".to_string())?;
-            f(&*client_guard).map_err(|e| e.to_string())
-        }).await;
+            let client_guard = client_arc
+                .lock()
+                .map_err(|_| AppError::Internal("Lock poisoning error".to_string()))?;
+            f(&*client_guard).map_err(AppError::from)
+        })
+        .await;
 
         match result {
-            Ok(Ok(data)) => Ok(data),
-            Ok(Err(e)) => Err(e),
-            Err(e) => Err(format!("RPC error: {}", e)),
+            Ok(inner_result) => inner_result,
+            Err(e) => Err(AppError::Internal(format!("Runtime spawn error: {}", e))),
         }
     }
-
 }

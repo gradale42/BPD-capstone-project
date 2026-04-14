@@ -2,6 +2,7 @@ use crate::api::wrap_response;
 use crate::domain::peers::PeerInfo;
 use crate::AppState;
 use actix_web::{web, Responder};
+use anyhow::Context;
 use bitcoincore_rpc::RpcApi;
 
 #[derive(Debug, serde::Deserialize)]
@@ -26,7 +27,7 @@ pub async fn get_peers(
 
     let node_manager = &state.node_manager;
 
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let peers_raw =  client.get_peer_info()?;
@@ -55,10 +56,10 @@ pub async fn get_peers(
                 Ok(response)
             })
             .await
-            .map_err(|e| format!("RPC failed: {}", e))?;
+            .context("Failed to read peer info")?;
 
         Ok(rpc_result)
     }.await;
 
-    wrap_response(service_call)
+    wrap_response(result)
 }

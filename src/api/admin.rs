@@ -6,6 +6,7 @@ use crate::bitcoin::rpc::{
 use crate::services::ExecutionCtx;
 use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
+use anyhow::Context;
 use bitcoincore_rpc::RpcApi;
 use serde_json::json;
 
@@ -16,17 +17,17 @@ pub struct MineParams {
 
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let rpc_result = node_manager
             .execute_rpc("student_wallet", move |client| {
                 let _ = import_descriptors(client);
                 Ok(())
             })
             .await
-            .map_err(|e| format!("RPC failed: {}", e));
+            .context("Failed to import descriptors")?;
         Ok(rpc_result)
     }.await;
-    wrap_response(service_call)
+    wrap_response(result)
 }
 
 pub async fn mine_blocks_handler(
@@ -41,7 +42,7 @@ pub async fn mine_blocks_handler(
     }
 
     let node_manager = &state.node_manager;
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let mining_address = setup_mining_address(client).unwrap();
@@ -53,12 +54,12 @@ pub async fn mine_blocks_handler(
                 Ok(res)
             })
             .await
-            .map_err(|e| format!("RPC failed: {}", e))?;
-
+            .context("Failed to generate blocks")?;
+ 
         Ok(rpc_result)
     }.await;
 
-    wrap_response(service_call)
+    wrap_response(result)
 }
 pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> impl Responder {
     const DEFAULT_COUNT: u64 = 500;
@@ -67,7 +68,7 @@ pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> i
     let block_service = &state.block_service;
     let network = state.node_manager.get_current_network();
 
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let rpc_result = node_manager
             .execute_rpc("", move |client| {
                 let blocks =
@@ -75,15 +76,15 @@ pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> i
                 Ok(blocks)
             })
             .await
-            .map_err(|e| format!("RPC failed: {}", e))?;
+            .context("Failed to extract blocks")?;
 
         let db_result = block_service
             .save_blocks_ignore_duplicates(&mut ctx, rpc_result)
             .await
-            .map_err(|e| format!("DB failed: {}", e))?;
+            .context("Failed to save blocks")?;
 
         Ok(db_result)
     }.await;
 
-    wrap_response(service_call)
+    wrap_response(result)
 }

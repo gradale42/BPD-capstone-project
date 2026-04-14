@@ -1,18 +1,16 @@
-pub mod blocks;
-pub mod block;
-pub mod mempool;
-pub mod peers;
 pub mod admin;
-pub mod wallets;
-pub mod scheduler;
+pub mod block;
+pub mod blocks;
 pub mod indexer;
 pub mod live;
+pub mod mempool;
 pub mod network;
+pub mod peers;
+pub mod scheduler;
+pub mod wallets;
 
 use actix_web::{web, HttpResponse};
-use serde::Serialize;
 use serde_json::json;
-use std::fmt::Display;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -45,10 +43,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 }
 
-pub fn wrap_response<R, E>(result: Result<R, E>) -> HttpResponse
+pub fn wrap_response<R>(result: anyhow::Result<R>) -> HttpResponse
 where
-    R: Serialize,
-    E: Display,
+    R: serde::Serialize,
 {
     match result {
         Ok(data) => HttpResponse::Ok().json(json!({

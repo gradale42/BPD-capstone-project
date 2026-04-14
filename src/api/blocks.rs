@@ -4,6 +4,7 @@ use crate::domain::block::{BlocksParams, TimeRange};
 use crate::services::ExecutionCtx;
 use crate::AppState;
 use actix_web::{web, Responder};
+use anyhow::Context;
 
 #[derive(Debug, serde::Serialize)]
 pub struct DataTableResponse<T> {
@@ -43,22 +44,22 @@ pub async fn get_blocks(
             };
 
             let block_service = &state.block_service;
-            let service_call: Result<_, String> = async {
+            let result: anyhow::Result<_> = async {
                 let db_result = block_service
                     .get_blocks_from_db(&mut ctx, length as i64, start as i64, &order_by)
                     .await
-                    .map_err(|e| format!("DB failed: {}", e))?;
+                    .context("Failed to read blocks from db")?;
                 Ok(db_result)
             }.await;
 
-            wrap_response(service_call)
+            wrap_response(result)
         }
         _ => {
             // Live mode (RPC)
             let node_manager = &state.node_manager;
             let network = state.node_manager.get_current_network();
 
-            let service_call: Result<_, String> = async {
+            let result: anyhow::Result<_> = async {
                 let rpc_result = node_manager
                     .execute_rpc("", move |client| {
                         let blocks = get_blocks_info(client, network, Some(length))?;
@@ -71,11 +72,11 @@ pub async fn get_blocks(
                         Ok(response)
                     })
                     .await
-                    .map_err(|e| format!("RPC failed: {}", e))?;
+                    .context("Failed to extract blocks")?;
                 Ok(rpc_result)
             }.await;
 
-            wrap_response(service_call)
+            wrap_response(result)
         }
     }
 }
@@ -86,12 +87,12 @@ pub async fn get_block_time_series(
     query: web::Query<TimeRange>,
 ) -> impl Responder {
     let block_service = &state.block_service;
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let db_result = block_service
             .get_timeseries(&mut ctx, query.from, query.to)
             .await
-            .map_err(|e| format!("DB failed: {}", e))?;
+            .context("Failed to read block metrics from db")?;
           Ok(db_result)
     }.await;
-    wrap_response(service_call)
+    wrap_response(result)
 }

@@ -27,6 +27,7 @@ use sqlx::PgPool;
 use std::collections::HashMap;
 use std::net::TcpListener;
 use std::sync::Arc;
+use thiserror::Error;
 
 pub struct AppState {
     pub node_manager: Arc<BitcoinNodeManager>,
@@ -35,6 +36,21 @@ pub struct AppState {
     pub scheduler_log_service: Arc<SchedulerLogService>,
     pub scheduler_service : Arc<SchedulerService>,
     pub mempool_metrics_service: Arc<MempoolMetricsService>,
+}
+
+#[derive(Error, Debug)]
+pub enum AppError {
+    #[error("RPC error: {0}")]
+    Rpc(#[from] bitcoincore_rpc::Error),
+
+    #[error("Database error: {0}")]
+    Db(#[from] sqlx::Error),
+
+    #[error("Internal error: {0}")]
+    Internal(String),
+
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {

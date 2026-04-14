@@ -2,6 +2,7 @@ use crate::api::wrap_response;
 use crate::services::ExecutionCtx;
 use crate::AppState;
 use actix_web::{web, HttpResponse, Responder};
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
@@ -70,16 +71,16 @@ pub async fn get_scheduler_logs(
     let start = params.start.unwrap_or(0) as i64;
 
     let scheduler_log_service = &state.scheduler_log_service;
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let total = scheduler_log_service
             .count_logs(&mut ctx)
             .await
-            .map_err(|e| format!("DB failed: {}", e))?;
+            .context("Failed to read scheduler logs from db")?;
 
         let logs = scheduler_log_service
             .list_logs(&mut ctx, length, start)
             .await
-            .map_err(|e| format!("DB failed: {}", e))?;
+            .context("Failed to read scheduler logs from db")?;
 
         let response = DataTableResponse {
             draw: params.draw,
@@ -91,7 +92,7 @@ pub async fn get_scheduler_logs(
         Ok(response)
     }.await;
 
-    wrap_response(service_call)
+    wrap_response(result)
 }
 
 pub async fn get_scheduler_log(
@@ -100,13 +101,13 @@ pub async fn get_scheduler_log(
     let id = path.into_inner();
 
     let scheduler_log_service = &state.scheduler_log_service;
-    let service_call: Result<_, String> = async {
+    let result: anyhow::Result<_> = async {
         let log = scheduler_log_service
             .get_log(&mut ctx, id)
             .await
-            .map_err(|e| format!("DB failed: {}", e))?;
+            .context("Failed to read scheduler logs from db")?;
         Ok(log)
     }.await;
 
-    wrap_response(service_call)
+    wrap_response(result)
 }
