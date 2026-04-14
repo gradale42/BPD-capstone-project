@@ -5,6 +5,12 @@ use actix_web::{web, HttpResponse, Responder};
 use bitcoincore_rpc::{Client, RpcApi};
 use serde_json::{json, Value};
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/wallets",
+    responses((status = 200, body = Vec<String>)),
+    tag = "Wallets"
+)]
 pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
     // 1. Get the list of names using the default client
     let names_result = web::block({
@@ -53,8 +59,13 @@ pub async fn list_wallets(state: web::Data<AppState>) -> impl Responder {
     }))
 }
 
-
-
+#[utoipa::path(
+    get,
+    path = "/api/v1/wallets/{wallet_name}",
+    params(("wallet_name" = String, Path, description = "Wallet name")),
+    responses((status = 200, body = WalletInfo), (status = 404)),
+    tag = "Wallets"
+)]
 pub async fn get_wallet_details_handler(
     state: web::Data<AppState>,
     wallet_name: web::Path<String>,
@@ -80,6 +91,13 @@ pub async fn get_wallet_details_handler(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/wallets/{wallet_name}/descriptors",
+    params(("wallet_name" = String, Path, description = "Wallet name")),
+    responses((status = 200, body = Vec<DescriptorInfo>), (status = 404)),
+    tag = "Wallets"
+)]
 pub async fn get_descriptors_handler(
     state: web::Data<AppState>,
     wallet_name: web::Path<String>,

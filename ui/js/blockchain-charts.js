@@ -3,7 +3,7 @@ let currentBlockchainMetric = 'all';  // 'all', 'tx_count', 'avg_fee_sat', 'avg_
 let currentBlockchainData = { tx_count: [], avg_fee_sat: [], avg_feerate: [] };
 
 async function fetchBlockchainData(fromTimestamp, toTimestamp) {
-    const url = `/api/blocks/timeseries?from=${Math.floor(fromTimestamp / 1000)}&to=${Math.floor(toTimestamp / 1000)}`;
+    const url = `/api/v1/blocks/timeseries?from=${Math.floor(fromTimestamp / 1000)}&to=${Math.floor(toTimestamp / 1000)}`;
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -173,7 +173,7 @@ async function refreshBlockchainChart(startDate, endDate) {
     try {
         const from = Math.floor(startDate.valueOf() / 1000);
         const to = Math.floor(endDate.valueOf() / 1000);
-        const url = `/api/blocks/timeseries?from=${from}&to=${to}`;
+        const url = `/api/v1/blocks/timeseries?from=${from}&to=${to}`;
         console.log('Fetching blockchain data from:', url);
 
         const response = await fetch(url);

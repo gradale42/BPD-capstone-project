@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use utoipa::ToSchema;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -38,7 +39,7 @@ impl DatabaseSettings {
 }
 
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, ToSchema)]
 #[sqlx(type_name = "bitcoin_network", rename_all = "lowercase")]
 pub enum Network {
     Regtest,

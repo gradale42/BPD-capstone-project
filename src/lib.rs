@@ -1,19 +1,16 @@
 //#![allow(unused)]
 
-pub mod domain;
-pub mod configuration;
 pub mod api;
-pub mod services;
-pub mod db;
-pub mod indexer;
 pub mod bitcoin;
+pub mod configuration;
+pub mod db;
+pub mod domain;
+pub mod indexer;
+pub mod services;
 
 use crate::configuration::ALL_BITCOIN_NETWORKS;
 use crate::db::mempool_metrics_repository::PostgresMempoolMetricsRepository;
-use crate::db::{
-    PostgresBlockRepository,
-    PostgresSchedulerLogRepository,
-};
+use crate::db::{PostgresBlockRepository, PostgresSchedulerLogRepository};
 use crate::indexer::scheduler::SchedulerService;
 use crate::services::block_service::BlockService;
 use crate::services::mempool_metrics_service::MempoolMetricsService;
@@ -34,7 +31,7 @@ pub struct AppState {
     pub db_pool: PgPool,
     pub block_service: Arc<BlockService>,
     pub scheduler_log_service: Arc<SchedulerLogService>,
-    pub scheduler_service : Arc<SchedulerService>,
+    pub scheduler_service: Arc<SchedulerService>,
     pub mempool_metrics_service: Arc<MempoolMetricsService>,
 }
 
@@ -59,11 +56,14 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     let mut network_configs = HashMap::new();
     for network in ALL_BITCOIN_NETWORKS {
         let node_config = config.bitcoin.get_node_config(network);
-        network_configs.insert(network, BitcoinNodeConfig {
-            rpc_url: node_config.rpc_url,
-            rpc_user: node_config.rpc_user,
-            rpc_password: node_config.rpc_password,
-        });
+        network_configs.insert(
+            network,
+            BitcoinNodeConfig {
+                rpc_url: node_config.rpc_url,
+                rpc_user: node_config.rpc_user,
+                rpc_password: node_config.rpc_password,
+            },
+        );
     }
     let node_manager = Arc::new(BitcoinNodeManager::new(network_configs, Network::Regtest));
 
@@ -74,13 +74,10 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
 
     // service layer
     let block_service = Arc::new(BlockService::new(block_repo.clone()));
-    let scheduler_log_service = Arc::new(SchedulerLogService::new(
-        scheduler_log_repo.clone(),
-    ));
+    let scheduler_log_service = Arc::new(SchedulerLogService::new(scheduler_log_repo.clone()));
     let scheduler_service = Arc::new(SchedulerService::new());
-    let mempool_metrics_service = Arc::new(MempoolMetricsService::new(
-        mempool_metrics_repo.clone()
-    ));
+    let mempool_metrics_service =
+        Arc::new(MempoolMetricsService::new(mempool_metrics_repo.clone()));
 
     let app_state = web::Data::new(AppState {
         node_manager: node_manager.clone(),
@@ -88,7 +85,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
         block_service,
         scheduler_log_service,
         scheduler_service,
-        mempool_metrics_service
+        mempool_metrics_service,
     });
 
     println!("\n================================================");
@@ -99,8 +96,10 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     println!("📀 PGADMIN:      {}", "http://127.0.0.1:8979");
     println!("📀 ADMINER:      {}", "http://127.0.0.1:8980");
     println!("================================================");
-    
-    let networks_info: Vec<String> = config.bitcoin.networks
+
+    let networks_info: Vec<String> = config
+        .bitcoin
+        .networks
         .iter()
         .map(|(name, cfg)| format!("{}:{}", name, cfg.rpc_url))
         .collect();
@@ -113,10 +112,6 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     println!("   • All networks: {}", networks_info.join(", "));
     println!("================================================");
 
-    println!("📊 RPC endpoints: /api/blocks, /api/mempool, /api/peers");
-    println!("🛠️ Admin endpoints: /api/admin/import-descriptors, /api/admin/mine-blocks\n");
-    println!("🌐 Network switch endpoint: POST /api/network/switch\n");
-
     let server = HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
@@ -124,8 +119,8 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
             .service(actix_fs::Files::new("/ui", "./ui").show_files_listing())
             .service(actix_fs::Files::new("/", "./ui").index_file("index.html"))
     })
-        .listen(listener)?
-        .run();
+    .listen(listener)?
+    .run();
 
     Ok(server)
 }

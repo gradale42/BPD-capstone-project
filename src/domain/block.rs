@@ -2,8 +2,9 @@ use crate::configuration::Network;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct BlocksParams {
     pub draw: i32,
     pub start: Option<i32>,
@@ -12,7 +13,7 @@ pub struct BlocksParams {
     pub mode: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow, ToSchema)]
 pub struct BlockInfo {
     pub network: Network,
     pub height: i64,
@@ -29,21 +30,21 @@ pub struct BlockInfo {
     pub indexed_at: Option<DateTime<Utc>>,    // Unix timestamp when indexed
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct Order {
     pub column: usize,
     pub dir: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
 pub struct TimeRange {
-    pub from: i64,  // Unix timestamp (seconds)
+    pub from: i64,
     pub to: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow, ToSchema)]
 pub struct TimeseriesPoint {
-    pub time: i64,           // Unix timestamp (seconds)
+    pub time: i64,
     pub tx_count: i32,
     pub avg_fee_sat: i64,
     pub avg_feerate: f64,

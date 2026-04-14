@@ -319,7 +319,7 @@ async function refreshMempoolMetricsChart(startDate, endDate) {
     try {
         const from = Math.floor(startDate.valueOf() / 1000);
         const to = Math.floor(endDate.valueOf() / 1000);
-        const url = `/api/mempool/timeseries?from=${from}&to=${to}`;
+        const url = `/api/v1/mempool/timeseries?from=${from}&to=${to}`;
         console.log('Fetching historical mempool data from:', url);
 
         const response = await fetch(url);

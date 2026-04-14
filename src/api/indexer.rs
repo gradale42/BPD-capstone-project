@@ -4,6 +4,13 @@ use crate::AppState;
 use actix_web::{web, Responder};
 use anyhow::Context;
 
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/indexer",
+    responses((status = 200, body = u64, description = "Current block height indexed")),
+    tag = "Mempool"
+)]
 pub async fn get_indexer_stats(
     state: web::Data<AppState>,
     mut ctx: ExecutionCtx,

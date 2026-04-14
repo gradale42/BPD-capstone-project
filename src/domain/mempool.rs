@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, ToSchema)]
 pub struct MempoolSnapshot {
     pub timestamp: String,
     pub tx_count: usize,
@@ -13,7 +14,7 @@ pub struct MempoolSnapshot {
 }
 
 
-#[derive(Debug, Clone, serde::Serialize)]  
+#[derive(Debug, Clone, serde::Serialize, ToSchema)]
 pub struct MempoolTransaction {
     pub txid: String,
     pub vsize: u64,
@@ -28,7 +29,7 @@ pub struct MempoolTransaction {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct MempoolMetrics {
     pub id: Uuid,
     pub network: String,
@@ -42,18 +43,16 @@ pub struct MempoolMetrics {
     pub indexed_at: DateTime<Utc>,
 }
 
-// Point for timeseries charts
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct MempoolMetricsPoint {
-    pub time: i64,  // Unix timestamp
+    pub time: i64,
     pub tx_count: i32,
     pub vbytes: i64,
     pub total_fees_btc: f64,
     pub avg_feerate: Option<f64>,
 }
 
-// Query parameters for time range
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
 pub struct MempoolTimeRange {
     pub from: i64,
     pub to: i64,

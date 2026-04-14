@@ -1,4 +1,6 @@
-#[derive(Debug, serde::Serialize)]
+use utoipa::ToSchema;
+
+#[derive(Debug, serde::Serialize, ToSchema)]
 pub struct PeerInfo {
     pub peer_id: u64,
     pub inbound: bool,

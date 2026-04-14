@@ -7,6 +7,12 @@ use actix_web::{web, Responder};
 use anyhow::Context;
 use serde_json::json;
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/live",
+    responses((status = 200, body = serde_json::Value, description = "Live node stats")),
+    tag = "Live"
+)]
 pub async fn get_live_stats(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
 

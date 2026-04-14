@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
             msgDiv.textContent = 'Importing descriptors...';
             msgDiv.className = 'admin-message'; // reset style
             try {
-                const response = await fetch('/api/admin/import-descriptors', { method: 'POST' });
+                const response = await fetch('/api/v1/admin/import-descriptors', { method: 'POST' });
                 const data = await response.json();
                 msgDiv.textContent = data.message;
                 msgDiv.className = data.status === 'success' ? 'admin-success' : 'admin-error';
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
             msgDiv.textContent = 'Mining 100 blocks...';
             msgDiv.className = 'admin-message';
             try {
-                const response = await fetch('/api/admin/mine-blocks?count=100', { method: 'POST' });
+                const response = await fetch('/api/v1/admin/mine-blocks?count=100', { method: 'POST' });
                 const data = await response.json();
                 msgDiv.textContent = data.message;
                 msgDiv.className = data.status === 'success' ? 'admin-success' : 'admin-error';
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
             msgDiv.textContent = 'Saving blocks to database...';
             msgDiv.className = 'admin-message';
             try {
-                const response = await fetch('/api/admin/save-blocks', { method: 'POST' });
+                const response = await fetch('/api/v1/admin/save-blocks', { method: 'POST' });
                 const data = await response.json();
                 msgDiv.textContent = data.message;
                 msgDiv.className = data.status === 'success' ? 'admin-success' : 'admin-error';
@@ -78,7 +78,7 @@ function updateIndexerProgress(percent, label = "Syncing blocks...") {
 
 $('#save-blocks-btn').click(async function() {
     try {
-        const response = await fetch('/api/admin/save-blocks', { method: 'POST' });
+        const response = await fetch('/api/v1/admin/save-blocks', { method: 'POST' });
         const result = await response.json();
 
         if (result.status === 'success') {
@@ -93,7 +93,7 @@ $('#save-blocks-btn').click(async function() {
 function startProgressPolling() {
     const interval = setInterval(async () => {
         try {
-            const res = await fetch('/api/admin/save-progress'); // Ваш эндпоинт со статусом
+            const res = await fetch('/api/v1/admin/save-progress'); // Ваш эндпоинт со статусом
             const data = await res.json();
 
             updateIndexerProgress(data.percent, data.message);

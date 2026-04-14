@@ -52,7 +52,7 @@ async function loadWalletsList() {
     try {
         walletSelect.innerHTML = '<option value="">Loading wallets...</option>';
 
-        const response = await fetch('/api/wallets');
+        const response = await fetch('/api/v1/wallets');
         const data = await response.json();
 
         if (data.status === 'success' && data.wallets) {
@@ -74,7 +74,7 @@ async function loadWalletsList() {
 
 async function loadWalletDetails(walletName) {
     try {
-        const response = await fetch(`/api/wallets/${walletName}`);
+        const response = await fetch(`/api/v1/wallets/${walletName}`);
         const data = await response.json();
 
         if (data.status === 'success' && data.wallet) {
@@ -124,7 +124,7 @@ async function loadWalletDescriptors(walletName) {
     try {
         descriptorsDiv.innerHTML = '<div class="loading">Loading descriptors...</div>';
 
-        const response = await fetch(`/api/wallets/${walletName}/descriptors`);
+        const response = await fetch(`/api/v1/wallets/${walletName}/descriptors`);
         const data = await response.json();
 
         if (data.status === 'success' && data.descriptors) {

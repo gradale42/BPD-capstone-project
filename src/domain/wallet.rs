@@ -1,6 +1,7 @@
+use utoipa::ToSchema;
 use crate::domain::address::AddressInfo;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, ToSchema)]
 pub struct WalletInfo {
     pub name: String,
     pub balance: f64,

@@ -82,7 +82,7 @@ window.showBlockDetails = async function(height, hash) {
     textContainer.innerHTML = loadingHtml;
 
     try {
-        const response = await fetch(`/api/block/${hash}`);
+        const response = await fetch(`/api/v1/block/${hash}`);
         const result = await response.json();
         if (result.status !== 'success') throw new Error(result.message);
         const blockData = result.data || result.block;

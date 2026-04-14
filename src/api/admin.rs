@@ -15,6 +15,12 @@ pub struct MineParams {
     pub count: u32,
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/import-descriptors",
+    responses((status = 200, description = "Descriptors imported")),
+    tag = "Admin"
+)]
 pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
     let result: anyhow::Result<_> = async {
@@ -30,6 +36,12 @@ pub async fn import_descriptors_handler(state: web::Data<AppState>) -> impl Resp
     wrap_response(result)
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/mine-blocks",
+    responses((status = 200, description = "Blocks mined")),
+    tag = "Admin"
+)]
 pub async fn mine_blocks_handler(
     state: web::Data<AppState>, query: web::Query<MineParams>,
 ) -> impl Responder {
@@ -55,12 +67,19 @@ pub async fn mine_blocks_handler(
             })
             .await
             .context("Failed to generate blocks")?;
- 
+
         Ok(rpc_result)
     }.await;
 
     wrap_response(result)
 }
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/save-blocks",
+    responses((status = 200, description = "Blocks saved")),
+    tag = "Admin"
+)]
 pub async fn save_blocks(state: web::Data<AppState>, mut ctx: ExecutionCtx) -> impl Responder {
     const DEFAULT_COUNT: u64 = 500;
 

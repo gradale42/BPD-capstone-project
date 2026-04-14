@@ -1,4 +1,6 @@
-#[derive(Debug, serde::Serialize)]
+use utoipa::ToSchema;
+
+#[derive(Debug, serde::Serialize,ToSchema)]
 pub struct AddressInfo {
     pub address: String,
     pub balance: f64,
@@ -7,7 +9,7 @@ pub struct AddressInfo {
     pub spent: f64,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, ToSchema)]
 pub struct DescriptorInfo {
     pub descriptor: String,
     pub active: bool,

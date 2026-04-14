@@ -1,5 +1,5 @@
 use crate::db::scheduler_log_repository::SchedulerLogRepository;
-use crate::domain::scheduler_log::{SchedulerLog, SyncResult};
+use crate::domain::scheduler::{SchedulerLog, SyncResult};
 use crate::services::ExecutionCtx;
 use sqlx::Error;
 use std::sync::Arc;

@@ -15,6 +15,12 @@ pub struct NetworkInfo {
     pub available_networks: Vec<String>,
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/network/switch",
+    responses((status = 200, description = "Network switched")),
+    tag = "Network"
+)]
 pub async fn switch_network(
     state: web::Data<AppState>,
     req: web::Json<SwitchNetworkRequest>,
@@ -37,6 +43,12 @@ pub async fn switch_network(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/network/current",
+    responses((status = 200, description = "Current network name")),
+    tag = "Network"
+)]
 pub async fn get_current_network(state: web::Data<AppState>) -> impl Responder {
     let current = state.node_manager.get_current_network();
 
@@ -51,6 +63,12 @@ pub async fn get_current_network(state: web::Data<AppState>) -> impl Responder {
     })
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/network/info",
+    responses((status = 200, description = "Network info summary")),
+    tag = "Network"
+)]
 pub async fn get_network_info(state: web::Data<AppState>) -> impl Responder {
     let current = state.node_manager.get_current_network();
 

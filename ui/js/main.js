@@ -2,7 +2,7 @@
 
 const USE_MOCK = false;
 
-const API_BASE = USE_MOCK ? '/api/mock' : '/api';
+const API_BASE = USE_MOCK ? '/api/v1/mock' : '/api/v1';
 
 // Network switching functionality
 async function initNetworkSelector() {
@@ -11,7 +11,7 @@ async function initNetworkSelector() {
 
     // Get current network
     try {
-        const response = await fetch('/api/network/current');
+        const response = await fetch('/api/v1/network/current');
         const data = await response.json();
         networkSelect.value = data.current_network;
         updateNetworkInfo();
@@ -28,7 +28,7 @@ async function initNetworkSelector() {
         networkSelect.disabled = true;
 
         try {
-            const response = await fetch('/api/network/switch', {
+            const response = await fetch('/api/v1/network/switch', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ async function initNetworkSelector() {
 
 async function updateNetworkInfo() {
     try {
-        const response = await fetch('/api/network/info');
+        const response = await fetch('/api/v1/network/info');
         const data = await response.json();
 
         const indicator = document.getElementById('network-indicator');
@@ -228,7 +228,7 @@ async function initLiveTiles() {
 
 async function updateLiveTiles() {
     try {
-        const response = await fetch('/api/live');
+        const response = await fetch('/api/v1/live');
         const result = await response.json();
         if (result.status !== 'success') throw new Error(result.message);
         const data = result.data || result.block;
@@ -251,7 +251,7 @@ async function updateLiveTiles() {
 
 async function updateIndexerTile() {
     try {
-        const response = await fetch('/api/indexer');
+        const response = await fetch('/api/v1/indexer');
         const data = await response.json();
 
         const lastBlockLive = data.last_block_live !== undefined ? data.last_block_live : '--';
@@ -317,7 +317,7 @@ function formatHashrate(value, decimals = 2) {
 // Function for the Live Stats tiles
 async function fetchLiveStats() {
     try {
-        const response = await fetch('/api/live');
+        const response = await fetch('/api/v1/live');
         const result = await response.json();
         if (result.status !== 'success') throw new Error(result.message);
         const data = result.data || result.block;
@@ -350,7 +350,7 @@ async function fetchLiveStats() {
 // Function for the Last block tile with comparison indicator
 async function fetchIndexerStats() {
     try {
-        const response = await fetch('/api/indexer');
+        const response = await fetch('/api/v1/indexer');
         const data = await response.json();
 
         const lastBlockLive = data.last_block_live !== undefined ? data.last_block_live : '--';
@@ -373,7 +373,7 @@ async function fetchIndexerStats() {
 
 async function updateMempoolStats() {
     try {
-        const response = await fetch('/api/mempool/stats');
+        const response = await fetch('/api/v1/mempool/stats');
         const data = await response.json();
 
         const txCountEl = document.getElementById('mempool-tx-count');
@@ -465,7 +465,7 @@ async function showTransactionDetails(txid) {
     modal.style.display = 'block';
 
     try {
-        const response = await fetch(`/api/mempool/transaction/${txid}`);
+        const response = await fetch(`/api/v1/mempool/transaction/${txid}`);
         const data = await response.json();
 
         const txidEl = document.getElementById('tx-txid');

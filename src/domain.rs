@@ -1,5 +1,5 @@
 pub mod block;
-pub mod scheduler_log;
+pub mod scheduler;
 pub mod mempool;
 pub mod peers;
 pub mod wallet;

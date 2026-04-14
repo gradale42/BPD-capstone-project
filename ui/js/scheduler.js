@@ -10,7 +10,7 @@ function initSchedulerTab() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: '/api/scheduler/logs',
+            url: '/api/v1/scheduler/logs',
             type: 'GET'
         },
         columns: [
@@ -61,8 +61,8 @@ function initSchedulerTab() {
         const blocksCount = $('#scheduler-blocks-count').val();
 
         const url = action === 'start'
-            ? `/api/scheduler/start?interval_minutes=${interval}&blocks_count=${blocksCount}`
-            : '/api/scheduler/stop';
+            ? `/api/v1/scheduler/start?interval_minutes=${interval}&blocks_count=${blocksCount}`
+            : '/api/v1/scheduler/stop';
 
         btn.prop('disabled', true);
         try {
@@ -94,7 +94,7 @@ function initSchedulerTab() {
 
 async function updateSchedulerStatus() {
     try {
-        const response = await fetch('/api/scheduler/status');
+        const response = await fetch('/api/v1/scheduler/status');
         const data = await response.json();
         const isRunning = data.running;
 
@@ -142,7 +142,7 @@ async function loadLogDetails(logId) {
     currentSelectedLogId = logId;
 
     try {
-        const response = await fetch(`/api/scheduler/log/${logId}`);
+        const response = await fetch(`/api/v1/scheduler/log/${logId}`);
         const log = await response.json();
 
         const resultDetails = $('#log-result-details');

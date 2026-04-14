@@ -1,12 +1,13 @@
 use crate::api::wrap_response;
 use crate::bitcoin::rpc;
-use crate::domain::mempool::{MempoolSnapshot, MempoolTimeRange};
+use crate::domain::mempool::{MempoolMetrics, MempoolMetricsPoint, MempoolSnapshot, MempoolTimeRange, MempoolTransaction};
 use crate::services::ExecutionCtx;
 use crate::AppState;
 use actix_web::{web, Responder};
 use anyhow::Context;
 use bitcoincore_rpc::{Error, RpcApi};
 use serde_json::json;
+use utoipa::IntoParams;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct MempoolParams {
@@ -23,7 +24,7 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, IntoParams)]
 pub struct MempoolTxsParams {
     pub draw: i32,
     pub start: Option<i32>,
@@ -31,6 +32,12 @@ pub struct MempoolTxsParams {
     pub order: Option<Vec<Vec<String>>>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/mempool",
+    responses((status = 200, body = MempoolSnapshot)),
+    tag = "Mempool"
+)]
 pub async fn get_mempool(
     state: web::Data<AppState>,
     web::Query(params): web::Query<MempoolParams>,
@@ -68,6 +75,13 @@ pub async fn get_mempool(
     wrap_response(result)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/mempool/timeseries",
+    params(MempoolTimeRange),
+    responses((status = 200, body = Vec<MempoolMetricsPoint>)),
+    tag = "Mempool"
+)]
 pub async fn get_mempool_timeseries(
     state: web::Data<AppState>, mut ctx: ExecutionCtx, query: web::Query<MempoolTimeRange>,
 ) -> impl Responder {
@@ -82,6 +96,17 @@ pub async fn get_mempool_timeseries(
     wrap_response(result)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/mempool/transactions",
+    params(
+        MempoolTxsParams
+    ),
+    responses(
+        (status = 200, description = "List of mempool transactions", body = Vec<MempoolTransaction>)
+    ),
+    tag = "Mempool"
+)]
 pub async fn get_mempool_transactions(
     state: web::Data<AppState>, web::Query(params): web::Query<MempoolTxsParams>,
 ) -> impl Responder {
@@ -181,6 +206,12 @@ pub async fn get_mempool_transactions(
     wrap_response(result)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/mempool/stats",
+    responses((status = 200, body = MempoolMetrics)),
+    tag = "Mempool"
+)]
 pub async fn get_mempool_stats(state: web::Data<AppState>) -> impl Responder {
     let node_manager = &state.node_manager;
 
@@ -204,6 +235,13 @@ pub async fn get_mempool_stats(state: web::Data<AppState>) -> impl Responder {
     wrap_response(result)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/mempool/transactions/{txid}",
+    params(("txid" = String, Path, description = "Transaction ID")),
+    responses((status = 200, body = MempoolTransaction), (status = 404)),
+    tag = "Mempool"
+)]
 pub async fn get_transaction_details(
     state: web::Data<AppState>, path: web::Path<String>,
 ) -> impl Responder {

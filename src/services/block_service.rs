@@ -60,6 +60,8 @@ impl BlockService {
             let mut saved = 0;
             let mut skipped = 0;
             for block in blocks {
+                //TODO: optimize this by doing a batch query to find existing heights first, then only insert missing ones
+                //TODO: measure time taken by find_by_height and save to identify bottleneck
                 match self.repo.find_by_height(tx, network, block.height).await {
                     Ok(_) => skipped += 1,
                     Err(sqlx::Error::RowNotFound) => {

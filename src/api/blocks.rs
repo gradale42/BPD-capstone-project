@@ -1,6 +1,6 @@
 use crate::api::wrap_response;
-use crate::bitcoin::rpc::get_blocks_info;
-use crate::domain::block::{BlocksParams, TimeRange};
+use crate::bitcoin::rpc::{get_block_details, get_blocks_info};
+use crate::domain::block::{BlockInfo, BlocksParams, TimeRange, TimeseriesPoint};
 use crate::services::ExecutionCtx;
 use crate::AppState;
 use actix_web::{web, Responder};
@@ -14,6 +14,13 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/blocks",
+    responses((status = 200, body = Vec<BlockInfo>)),
+    tag = "Blocks"
+)]
 pub async fn get_blocks(
     state: web::Data<AppState>, mut ctx: ExecutionCtx, query: web::Query<BlocksParams>,
 ) -> impl Responder {
@@ -81,6 +88,13 @@ pub async fn get_blocks(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/blocks/timeseries",
+    params(TimeRange),
+    responses((status = 200, body = Vec<TimeseriesPoint>)),
+    tag = "Blocks"
+)]
 pub async fn get_block_time_series(
     state: web::Data<AppState>,
     mut ctx: ExecutionCtx,
@@ -96,3 +110,30 @@ pub async fn get_block_time_series(
     }.await;
     wrap_response(result)
 }
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/blocks/{block_hash}",
+    params(("block_hash" = String, Path, description = "Block hash")),
+    responses((status = 200, body = BlockInfo), (status = 404)),
+    tag = "Blocks"
+)]
+pub async fn get_block_by_hash(
+    state: web::Data<AppState>, block_hash: web::Path<String>,
+) -> impl Responder {
+    let hash = block_hash.into_inner();
+
+    let node_manager = &state.node_manager;
+    let result: anyhow::Result<_> = async {
+        let rpc_result = node_manager
+            .execute_rpc("", move |client| {
+                get_block_details(client, hash)
+            })
+            .await
+            .context("Failed to extract block")?;
+        Ok(rpc_result)
+    }.await;
+
+    wrap_response(result)
+}
+

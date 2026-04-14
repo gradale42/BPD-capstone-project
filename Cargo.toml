@@ -31,6 +31,9 @@ futures = "0.3.32"
 sqlx-core = "0.6.3"
 anyhow = "1.0.102"
 thiserror = "1.0.69"
+utoipa = { version = "5.0", features = ["chrono", "uuid"] }
+utoipa-swagger-ui = { version = "8.0", features = ["actix-web"] }
+
 
 [dependencies.sqlx]
 version = "0.6"

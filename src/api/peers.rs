@@ -20,6 +20,12 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/peers",
+    responses((status = 200, body = Vec<PeerInfo>)),
+    tag = "Peers"
+)]
 pub async fn get_peers(
     state: web::Data<AppState>,
     web::Query(params): web::Query<PeersParams>,

@@ -6,6 +6,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
+use crate::domain::scheduler::SchedulerLog;
 
 #[derive(Debug, Deserialize)]
 pub struct StartSchedulerParams {
@@ -18,6 +19,12 @@ pub struct SchedulerStatus {
     pub running: bool,
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/scheduler/start",
+    responses((status = 200, description = "Scheduler started")),
+    tag = "Scheduler"
+)]
 pub async fn start_scheduler(
     state: web::Data<AppState>, params: web::Query<StartSchedulerParams>,
 ) -> impl Responder {
@@ -35,6 +42,12 @@ pub async fn start_scheduler(
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/scheduler/stop",
+    responses((status = 200, description = "Scheduler stopped")),
+    tag = "Scheduler"
+)]
 pub async fn stop_scheduler(state: web::Data<AppState>) -> impl Responder {
     state.scheduler_service.stop(&state).await;
 
@@ -44,6 +57,12 @@ pub async fn stop_scheduler(state: web::Data<AppState>) -> impl Responder {
     }))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/scheduler/status",
+    responses((status = 200, description = "Current scheduler status")),
+    tag = "Scheduler"
+)]
 pub async fn get_scheduler_status(state: web::Data<AppState>) -> impl Responder {
     let running = state.scheduler_service.is_running().await;
     HttpResponse::Ok().json(SchedulerStatus { running })
@@ -64,6 +83,12 @@ pub struct DataTableResponse<T> {
     pub data: Vec<T>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/scheduler/logs",
+    responses((status = 200, body = Vec<SchedulerLog>)),
+    tag = "Scheduler"
+)]
 pub async fn get_scheduler_logs(
     state: web::Data<AppState>, mut ctx: ExecutionCtx, params: web::Query<LogsParams>,
 ) -> impl Responder {
@@ -95,6 +120,13 @@ pub async fn get_scheduler_logs(
     wrap_response(result)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/scheduler/log/{id}",
+    params(("id" = Uuid, Path, description = "Log ID")),
+    responses((status = 200, body = SchedulerLog), (status = 404)),
+    tag = "Scheduler"
+)]
 pub async fn get_scheduler_log(
     state: web::Data<AppState>, mut ctx: ExecutionCtx, path: web::Path<Uuid>,
 ) -> impl Responder {

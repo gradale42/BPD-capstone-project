@@ -13,7 +13,7 @@ function initTables() {
         ajax: function(data, callback, settings) {
             data.mode = currentMode;
             $.ajax({
-                url: '/api/blocks',
+                url: '/api/v1/blocks',
                 type: 'GET',
                 data: data,
                 success: function(response) {
@@ -94,7 +94,7 @@ function initTables() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: '/api/mempool/transactions',
+            url: '/api/v1/mempool/transactions',
             type: 'GET',
             data: function(d) {
                 // Add sorting information
@@ -179,7 +179,7 @@ function initTables() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: '/api/peers',
+            url: '/api/v1/peers',
             type: 'GET'
         },
         columns: [
